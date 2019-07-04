@@ -32,7 +32,7 @@ class Handler:
                 print(scheme, "not found")
                 return -1
 
-    def load(self, path, onehot=False, header=False, **kwargs):
+    def load(self, path, test, onehot=False, header=False, **kwargs):
         """
         Loads original dataset into memory
         """
@@ -76,9 +76,9 @@ class Handler:
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
             train = org_path[0].split(".")[0].split("/")[-1]
             train = org_path[1].split(".")[0].split("/")[-1]
-            for s in schema:
-                np.save(save_path.lower() + train + "_" + s, x)
-                np.save(save_path.lower() + test + "_" + s, x)
+            for idx, s in enumerate(schema):
+                np.save(save_path.lower() + train + "_" + s, x[idx][0])
+                np.save(save_path.lower() + test + "_" + s, x[idx][1])
         else:
             save_path = "datasets/" + org_path.split("/")[1] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
@@ -87,21 +87,23 @@ class Handler:
                 np.save(save_path.lower() + dataset + "_" + s, x)
         return 0
 
-    def prep(self, path, opts={}, save=True):
+    def prep(self, opts, save=True):
         """
         Calls handler functions to prepare a dataset
         """
 
         # operate pair-wise if there's a dedicated test set
         if opts["test"]:
-            x = self.load(path, **opts)
+            x = []
+            for p in opts["path"]:
+                x.append(self.load(**opts))
             x = self.scale(x, **opts)
             if save:
-                self.save(x, path, opts["scheme"], True)
+                self.save(x, opts["path"], opts["scheme"], True)
 
         # otherwise, go dataset-by-dataset
         else:
-            for p in path:
+            for p in opts["path"]:
                 x = self.load(p, **opts)
                 x = self.scale(x, **opts)
                 if save:

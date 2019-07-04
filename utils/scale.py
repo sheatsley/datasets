@@ -1,7 +1,9 @@
 """ 
 
 This module contains different attribute scaling techniques. At present, these
-functions are simply scikit-learn wrappers.
+functions are simply scikit-learn wrappers. These functions expect scaling
+attributes of one dataset wrt another (e.g., testing wrt training) to be passed
+in as a list.
 
 """
 
@@ -13,9 +15,14 @@ def rescale(x, minimum=0, maximum=1):
     Defined as: 
         x' = (x - min(x))/(max(x) - min(x))
     """
-    from sklearn.preprocessing import minmax_scale
+    from sklearn.preprocessing import MinMaxScaler
 
-    return minmax_scale(x, feature_range=(minimum, maximum))
+    scaler = MinMaxScaler(feature_range=(minimum, maximum))
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
 
 
 def normalization(x):
@@ -25,9 +32,14 @@ def normalization(x):
     Defined as: 
         x' = (x - mean(x))/(max(x) - min(x))
     """
-    from sklearn.preprocessing import scale
+    from sklearn.preprocessing import StandardScaler
 
-    return scale(x, with_std=False)
+    scaler = StandardScaler(with_std=False)
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
 
 
 def standardization(x):
@@ -37,9 +49,14 @@ def standardization(x):
     Defined as: 
         x' = (x - mean(x))/std(x)
     """
-    from sklearn.preprocessing import scale
+    from sklearn.preprocessing import StandardScaler
 
-    return scale(x)
+    scaler = StandardScaler()
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
 
 
 def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True):
@@ -52,9 +69,16 @@ def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True):
     where mean(x), max(x), min(x), and std(x) are subject to:
         minimum quantile < x < maximum quantile 
     """
-    return robust_scale(
-        x, with_centering=center, with_scaling=scale, quantile_range=(minimum, maximum)
+    from sklearn.processing import RobustScaler
+
+    scaler = RobustScaler(
+        quantile_range=(minimum, maximum), with_centering=center, with_scaling=scale
     )
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
 
 
 def unit_norm(x, p="l2"):
@@ -64,6 +88,11 @@ def unit_norm(x, p="l2"):
     Defined as: 
         x' = x / ||x||_p
     """
-    from sklearn.preprocessing import normalize
+    from sklearn.preprocessing import Normalizer
 
-    return normalize(x, norm=p)
+    scaler = Normalizer(norm=p)
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
