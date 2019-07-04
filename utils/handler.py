@@ -67,8 +67,7 @@ class Handler:
 
         # every original dataset should have an extension (and no other periods)
         if test:
-            ds = org[0].split("/")
-            save_path = "datasets/" + ds[ds.index("dataset") + 1] + "/numpy/"
+            save_path = org_path[0].split("/")[0] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
             train = org_path[0].split("/")[-1].split(".")[0]
             train = org_path[1].split("/")[-1].split(".")[0]
@@ -76,8 +75,7 @@ class Handler:
                 np.save(save_path.lower() + train + "_" + s, x[idx][0])
                 np.save(save_path.lower() + test + "_" + s, x[idx][1])
         else:
-            ds = org[0].split("/")
-            save_path = "datasets/" + ds[ds.index("dataset") + 1] + "/numpy/"
+            save_path = org_path.split("/")[0] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
             dataset = org_path.split("/")[-1].split(".")[0]
             for s in schema:
@@ -121,14 +119,18 @@ if __name__ == "__main__":
     - onehot: if categorical features should be converted to onehot vectors
     - scheme: feature scaling schema (schema listed above)
     """
+    import os
+
+    handler = Handler()
+    os.chdir("..")
     opts = {
         "dgd": {
             "path": (
-                "../datasets/dgd/original/FixedObstruction_e6.csv",
-                "../datasets/dgd/original/FixedObstruction_e7.csv",
-                "../datasets/dgd/original/OriginalDataset_e6.csv",
-                "../datasets/dgd/original/RandomObstruction_e6.csv",
-                "../datasets/dgd/original/RandomObstruction_e7.csv",
+                "dgd/original/FixedObstruction_e6.csv",
+                "dgd/original/FixedObstruction_e7.csv",
+                "dgd/original/OriginalDataset_e6.csv",
+                "dgd/original/RandomObstruction_e6.csv",
+                "dgd/original/RandomObstruction_e7.csv",
             ),
             "test": False,
             "header": True,
@@ -136,8 +138,8 @@ if __name__ == "__main__":
         },
         "nslkdd": {
             "path": (
-                "../datasets/nslkdd/original/KDDTrain+.txt",
-                "../datasets/nslkdd/original/KDDTest+.txt",
+                "nslkdd/original/KDDTrain+.txt",
+                "nslkdd/original/KDDTest+.txt",
             ),
             "test": True,
             "onehot": True,
@@ -145,15 +147,14 @@ if __name__ == "__main__":
         },
         "unswnb15": {
             "path": (
-                "../datasets/original/unswnb15/UNSW_NB15_training-set.csv",
-                "../datasets/original/unswnb15/UNSW_NB15_testing-set.csv",
+                "unswnb15/original/UNSW_NB15_training-set.csv",
+                "unswnb15/original/UNSW_NB15_testing-set.csv",
             ),
             "test": True,
             "onehot": True,
             "scheme": "all",
         },
     }
-    handler = Handler()
     for dataset in opts:
         handler.prep(opts[dataset])
         print(dataset, "converted")
