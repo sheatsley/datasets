@@ -1,6 +1,8 @@
 """ 
+
 This module contains different attribute scaling techniques. At present, these
 functions are simply scikit-learn wrappers.
+
 """
 
 
