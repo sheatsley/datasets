@@ -8,7 +8,7 @@ in as a list.
 """
 
 
-def rescale(x, minimum=0, maximum=1):
+def rescale(x, minimum=0, maximum=1, **kwargs):
     """
     Rescales attributes to range [minimum, maximum]
 
@@ -25,7 +25,7 @@ def rescale(x, minimum=0, maximum=1):
         return scaler.fit_transform(x)
 
 
-def normalization(x):
+def normalization(x, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0
 
@@ -42,7 +42,7 @@ def normalization(x):
         return scaler.fit_transform(x)
 
 
-def standardization(x):
+def standardization(x, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0 and std(x) = 1
 
@@ -59,7 +59,7 @@ def standardization(x):
         return scaler.fit_transform(x)
 
 
-def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True):
+def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True, **kwargs):
     """
     Normalize/standardize attributes according to the interquartile range
 
@@ -81,7 +81,7 @@ def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True):
         return scaler.fit_transform(x)
 
 
-def unit_norm(x, p="l2"):
+def unit_norm(x, p="l2", **kwargs):
     """
     Scales attributes so that ||x||_p = 1
 

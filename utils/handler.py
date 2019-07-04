@@ -49,10 +49,7 @@ class Handler:
             return [getattr("scale", s)(x) for s in dir("scale") if not s.startswith("_")]
         else:
             try:
-                if not options:
-                    return [getattr("scale", scheme)(x)]
-                else:
-                    return [getattr("scale", scheme)(x, *options)]
+                return [getattr("scale", scheme)(x, **options)]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
