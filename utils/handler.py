@@ -11,7 +11,7 @@ class Handler:
     import numpy as np
     import pathlib
     from preprocess import encode
-    from scale import rescale, normalization, standardization, robust_scale, unit_norm
+    import scale
 
     def load(self, path, test, onehot=False, header=False, **kwargs):
         """
@@ -46,10 +46,10 @@ class Handler:
         Available options:
         """
         if scheme == "all":
-            return [getattr("scale", s)(x) for s in dir("scale") if not s.startswith("_")]
+            return [getattr(scale, s)(x) for s in dir(scale) if not s.startswith("_")]
         else:
             try:
-                return [getattr("scale", scheme)(x, **options)]
+                return [getattr(scale, scheme)(x, **options)]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
@@ -67,17 +67,19 @@ class Handler:
 
         # every original dataset should have an extension (and no other periods)
         if test:
-            save_path = "datasets/" + org_path[0].split("/")[1] + "/numpy/"
+            ds = org[0].split("/")
+            save_path = "datasets/" + ds[ds.index("dataset") + 1] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
-            train = org_path[0].split(".")[0].split("/")[-1]
-            train = org_path[1].split(".")[0].split("/")[-1]
+            train = org_path[0].split("/")[-1].split(".")[0]
+            train = org_path[1].split("/")[-1].split(".")[0]
             for idx, s in enumerate(schema):
                 np.save(save_path.lower() + train + "_" + s, x[idx][0])
                 np.save(save_path.lower() + test + "_" + s, x[idx][1])
         else:
-            save_path = "datasets/" + org_path.split("/")[1] + "/numpy/"
+            ds = org[0].split("/")
+            save_path = "datasets/" + ds[ds.index("dataset") + 1] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
-            dataset = org_path.split(".")[0].split("/")[-1]
+            dataset = org_path.split("/")[-1].split(".")[0]
             for s in schema:
                 np.save(save_path.lower() + dataset + "_" + s, x)
         return 0
@@ -122,11 +124,11 @@ if __name__ == "__main__":
     opts = {
         "dgd": {
             "path": (
-                "datasets/dgd/original/FixedObstruction_e6.csv",
-                "datasets/dgd/original/FixedObstruction_e7.csv",
-                "datasets/dgd/original/OriginalDataset_e6.csv",
-                "datasets/dgd/original/RandomObstruction_e6.csv",
-                "datasets/dgd/original/RandomObstruction_e7.csv",
+                "../datasets/dgd/original/FixedObstruction_e6.csv",
+                "../datasets/dgd/original/FixedObstruction_e7.csv",
+                "../datasets/dgd/original/OriginalDataset_e6.csv",
+                "../datasets/dgd/original/RandomObstruction_e6.csv",
+                "../datasets/dgd/original/RandomObstruction_e7.csv",
             ),
             "test": False,
             "header": True,
@@ -134,8 +136,8 @@ if __name__ == "__main__":
         },
         "nslkdd": {
             "path": (
-                "datasets/nslkdd/original/KDDTrain+.txt",
-                "datasets/nslkdd/original/KDDTest+.txt",
+                "../datasets/nslkdd/original/KDDTrain+.txt",
+                "../datasets/nslkdd/original/KDDTest+.txt",
             ),
             "test": True,
             "onehot": True,
@@ -143,8 +145,8 @@ if __name__ == "__main__":
         },
         "unswnb15": {
             "path": (
-                "datasets/original/unswnb15/UNSW_NB15_training-set.csv",
-                "datasets/original/unswnb15/UNSW_NB15_testing-set.csv",
+                "../datasets/original/unswnb15/UNSW_NB15_training-set.csv",
+                "../datasets/original/unswnb15/UNSW_NB15_testing-set.csv",
             ),
             "test": True,
             "onehot": True,
