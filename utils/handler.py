@@ -7,30 +7,11 @@ class which handles unique preprocessing requirements flexibly.
 
 
 class Handler:
-
-    # define imports used by the handler
     import csv
     import numpy as np
     import pathlib
     from preprocess import encode
     from scale import rescale, normalization, standardization, robust_scale, unit_norm
-
-    def scale(self, x, scheme, options=None, **kwargs):
-        """
-        Scales a dataset based on the scheme (with options)
-        Available options:
-        """
-        if scheme == "all":
-            return [getattr(scale, s)(x) for s in dir(scale) if not s.startswith("_")]
-        else:
-            try:
-                if not options:
-                    return [getattr(scale, scheme)(x)]
-                else:
-                    return [getattr(scale, scheme)(x, *options)]
-            except AttributeError:
-                print(scheme, "not found")
-                return -1
 
     def load(self, path, test, onehot=False, header=False, **kwargs):
         """
@@ -55,9 +36,26 @@ class Handler:
                     return np.array(x, dtype="float")
                 else:
                     print(ext, "file format not recognized/supported")
-        except (OSError, e):
+        except OSError as e:
             print(e.strerror)
             return -1
+
+    def scale(self, x, scheme, options=None, **kwargs):
+        """
+        Scales a dataset based on the scheme (with options)
+        Available options:
+        """
+        if scheme == "all":
+            return [getattr("scale", s)(x) for s in dir("scale") if not s.startswith("_")]
+        else:
+            try:
+                if not options:
+                    return [getattr("scale", scheme)(x)]
+                else:
+                    return [getattr("scale", scheme)(x, *options)]
+            except AttributeError:
+                print(scheme, "not found")
+                return -1
 
     def save(self, x, org_path, scheme, test):
         """
@@ -95,16 +93,21 @@ class Handler:
         # operate pair-wise if there's a dedicated test set
         if opts["test"]:
             x = []
+            paths = opts["path"]
             for p in opts["path"]:
+                opts["path"] = p
                 x.append(self.load(**opts))
+            opts["path"] = paths
             x = self.scale(x, **opts)
             if save:
                 self.save(x, opts["path"], opts["scheme"], True)
 
         # otherwise, go dataset-by-dataset
         else:
-            for p in opts["path"]:
-                x = self.load(p, **opts)
+            paths = opts["path"]
+            for p in paths:
+                opts["path"] = p
+                x = self.load(**opts)
                 x = self.scale(x, **opts)
                 if save:
                     self.save(x, p, opts["scheme"], False)
