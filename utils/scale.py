@@ -69,7 +69,7 @@ def robust_scale(x, minimum=25.0, maximum=75.0, center=True, scale=True, **kwarg
     where mean(x), max(x), min(x), and std(x) are subject to:
         minimum quantile < x < maximum quantile 
     """
-    from sklearn.processing import RobustScaler
+    from sklearn.preprocessing import RobustScaler
 
     scaler = RobustScaler(
         quantile_range=(minimum, maximum), with_centering=center, with_scaling=scale
