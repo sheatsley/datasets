@@ -12,9 +12,7 @@ import scale
 
 
 class Handler:
-    def load(
-        self, path, labels, header=False, onehot=False, categorical="all", **kwargs
-    ):
+    def load(self, path, header=False, onehot=False, categorical=[], **kwargs):
         """
         Loads original dataset into memory
         """
@@ -30,35 +28,35 @@ class Handler:
                     if header:
                         del x[0]
 
-                    # convert categorical attributes to one-hot vectors (do not pass labels)
+                    # convert categorical attributes to one-hot vectors
                     if onehot:
-                        x_enc = encode(x[:labels], categorical_features)
-                        x = np.concatenate(x_enc, x[labels:])
-                    return np.array(x, dtype="float")
+                        x = encode(x, categorical)
+                    return np.array((x))
                 else:
                     print(ext, "file format not recognized/supported")
         except OSError as e:
             print(e.strerror)
             return -1
 
-    def scale(self, x, scheme, labels, options=None, **kwargs):
+    def scale(self, x, scheme, exclude, options=None, **kwargs):
         """
         Scales a dataset based on the scheme (with options)
         Available options:
         """
 
-        # do not normalize labels
+        # ignore excluded attributes any scaling
+
         if scheme == "all":
             x_scale = [
-                getattr(scale, s)(x[:labels])
+                getattr(scale, s)(x[:, :labels])
                 for s in dir(scale)
                 if not s.startswith("_")
             ]
-            return [np.concatenate((xs, x[labels:])) for xs in x_scale]
+            return [np.concatenate((xs, x[:, labels:])) for xs in x_scale]
         else:
             try:
-                x_scale = [getattr(scale, scheme)(x[:labels], **options)]
-                return [np.concatenate((*x_scale, x[labels:]))]
+                x_scale = [getattr(scale, scheme)(x[:, :labels], **options)]
+                return [np.concatenate((*x_scale, x[:, labels:]))]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
@@ -123,10 +121,14 @@ class Handler:
 if __name__ == "__main__":
     """
     Convert and save all available datasets
-    Available options:
+    Parameters:
+    - path: path to the dataset to load
     - test: whether or not a dedicated test set exists
+    - header: whether or not a header row exists (which will be removed)
     - onehot: if categorical features should be converted to onehot vectors
+    - categorical: list of categorical indicies to onehot encode
     - scheme: feature scaling schema (schema listed above)
+    - exclude: exclude features from any feature scaling (post-onehot indicies)
     """
     import os
 
@@ -143,16 +145,16 @@ if __name__ == "__main__":
             ),
             "test": False,
             "header": True,
-            "labels": -1,
             "scheme": "all",
+            "exlude": [[-4], [-4], [-2], [-4], [-4]]
         },
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
             "onehot": True,
-            "categorical": [2, 3, 4],
-            "labels": -2,
+            "categorical": [1, 2, 3],
             "scheme": "all",
+            "exclude": [-2]
         },
         "unswnb15": {
             "path": (
@@ -161,9 +163,9 @@ if __name__ == "__main__":
             ),
             "test": True,
             "onehot": True,
-            "categorical": [],
-            "labels": -1,
+            "categorical": [2, 3, 4],
             "scheme": "all",
+            "exclude": [1]
         },
     }
     for dataset in opts:
