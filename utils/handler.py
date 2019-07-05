@@ -4,16 +4,17 @@ Most datasets are uniquely preprocessed. This module defines a generic handler
 class which handles unique preprocessing requirements flexibly.
 
 """
+import csv
+import numpy as np
+import pathlib
+from preprocess import encode
+import scale
 
 
 class Handler:
-    import csv
-    import numpy as np
-    import pathlib
-    from preprocess import encode
-    import scale
-
-    def load(self, path, test, onehot=False, header=False, **kwargs):
+    def load(
+        self, path, labels, header=False, onehot=False, categorical="all", **kwargs
+    ):
         """
         Loads original dataset into memory
         """
@@ -29,10 +30,10 @@ class Handler:
                     if header:
                         del x[0]
 
-                    # convert categorical attributes to one-hot vectors
+                    # convert categorical attributes to one-hot vectors (do not pass labels)
                     if onehot:
-                        x = encode(x)
-
+                        x_enc = encode(x[:labels], categorical_features)
+                        x = np.concatenate(x_enc, x[labels:])
                     return np.array(x, dtype="float")
                 else:
                     print(ext, "file format not recognized/supported")
@@ -40,16 +41,24 @@ class Handler:
             print(e.strerror)
             return -1
 
-    def scale(self, x, scheme, options=None, **kwargs):
+    def scale(self, x, scheme, labels, options=None, **kwargs):
         """
         Scales a dataset based on the scheme (with options)
         Available options:
         """
+
+        # do not normalize labels
         if scheme == "all":
-            return [getattr(scale, s)(x) for s in dir(scale) if not s.startswith("_")]
+            x_scale = [
+                getattr(scale, s)(x[:labels])
+                for s in dir(scale)
+                if not s.startswith("_")
+            ]
+            return [np.concatenate((xs, x[labels:])) for xs in x_scale]
         else:
             try:
-                return [getattr(scale, scheme)(x, **options)]
+                x_scale = [getattr(scale, scheme)(x[:labels], **options)]
+                return [np.concatenate((*x_scale, x[labels:]))]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
@@ -134,15 +143,15 @@ if __name__ == "__main__":
             ),
             "test": False,
             "header": True,
+            "labels": -1,
             "scheme": "all",
         },
         "nslkdd": {
-            "path": (
-                "nslkdd/original/KDDTrain+.txt",
-                "nslkdd/original/KDDTest+.txt",
-            ),
+            "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
             "onehot": True,
+            "categorical": [2, 3, 4],
+            "labels": -2,
             "scheme": "all",
         },
         "unswnb15": {
@@ -152,6 +161,8 @@ if __name__ == "__main__":
             ),
             "test": True,
             "onehot": True,
+            "categorical": [],
+            "labels": -1,
             "scheme": "all",
         },
     }
