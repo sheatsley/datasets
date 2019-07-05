@@ -4,10 +4,13 @@ functions are simply scikit-learn wrappers.
 """
 
 
-def encode(x, categorical_features):
+def encode(x, features):
     """
     Encodes categorical features as a one-hot array
     """
+    from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import OneHotEncoder
 
-    return OneHotEncoder(categorical_features=categorical_features).fit_transform(x)
+    return ColumnTransformer(
+        [("", OneHotEncoder(), features)], remainder="passthrough"
+        ).fit_transform(x)
