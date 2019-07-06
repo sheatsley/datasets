@@ -19,7 +19,9 @@ def normalization(x, features, **kwargs):
     from sklearn.preprocessing import StandardScaler
 
     scaler = ColumnTransformer(
-        [("", StandardScaler(with_std=False), features)], remainder="passthrough"
+        [("", StandardScaler(with_std=False), features)],
+        remainder="passthrough",
+        n_jobs=-1,
     )
     if isinstance(x, list):
         scaler.fit(x[0])
@@ -41,6 +43,7 @@ def rescale(x, features, minimum=0, maximum=1, **kwargs):
     scaler = ColumnTransformer(
         [("", MinMaxScaler(feature_range=(minimum, maximum)), features)],
         remainder="passthrough",
+        n_jobs=-1,
     )
     if isinstance(x, list):
         scaler.fit(x[0])
@@ -77,6 +80,7 @@ def robust_scale(
             )
         ],
         remainder="passthrough",
+        n_jobs=-1,
     )
     if isinstance(x, list):
         scaler.fit(x[0])
@@ -96,7 +100,7 @@ def standardization(x, features, **kwargs):
     from sklearn.preprocessing import StandardScaler
 
     scaler = ColumnTransformer(
-        [("", StandardScaler(), features)], remainder="passthrough"
+        [("", StandardScaler(), features)], remainder="passthrough", n_jobs=-1
     )
     if isinstance(x, list):
         scaler.fit(x[0])
@@ -116,7 +120,7 @@ def unit_norm(x, features, p="l2", **kwargs):
     from sklearn.preprocessing import Normalizer
 
     scaler = ColumnTransformer(
-        [("", Normalizer(norm=p), features)], remainder="passthrough"
+        [("", Normalizer(norm=p), features)], remainder="passthrough", n_jobs=-1
     )
     if isinstance(x, list):
         scaler.fit(x[0])
