@@ -49,9 +49,12 @@ class Handler:
         Available options:
         """
 
-        # translate to absolute if exlucion indicies are relative
+        # translate to absolute if excluded indicies are relative
         if isinstance(exclude, int) and exclude < 0:
-            exclude = set(range(x.shape[1], x.shape[1] + exclude - 1, -1))
+            if isinstance(x, list):
+                exclude = set(range(x[0].shape[1], x[0].shape[1] + exclude - 1, -1))
+            else:
+                exclude = set(range(x.shape[1], x.shape[1] + exclude - 1, -1))
 
         # ignore excluded attributes any scaling
         if isinstance(x, list):
@@ -86,15 +89,15 @@ class Handler:
         if test:
             save_path = org_path[0].split("/")[0] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
-            train = org_path[0].split("/")[-1].split(".")[0]
-            train = org_path[1].split("/")[-1].split(".")[0]
+            train = org_path[0].split("/")[-1].split(".")[0].lower()
+            test = org_path[1].split("/")[-1].split(".")[0].lower()
             for idx, s in enumerate(schema):
                 np.save(save_path.lower() + train + "_" + s, x[idx][0])
                 np.save(save_path.lower() + test + "_" + s, x[idx][1])
         else:
             save_path = org_path.split("/")[0] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
-            dataset = org_path.split("/")[-1].split(".")[0]
+            dataset = org_path.split("/")[-1].split(".")[0].lower()
             for s in schema:
                 np.save(save_path.lower() + dataset + "_" + s, x)
         return 0
@@ -112,7 +115,7 @@ class Handler:
                 opts["path"] = p
                 x.append(self.load(**opts))
             opts["path"] = paths
-            x = self.manipulate_attributes(x, **opts))
+            x = self.manipulate(x, **opts)
             x = self.scale(x, **opts)
             if save:
                 self.save(x, opts["path"], opts["scheme"], True)
@@ -151,7 +154,6 @@ if __name__ == "__main__":
     handler = Handler()
     os.chdir("..")
     opts = {
-        """
         "dgd": {
             "path": (
                 "dgd/original/FixedObstruction_e6.csv",
@@ -165,7 +167,6 @@ if __name__ == "__main__":
             "scheme": "all",
             "exclude": ((-4), (-4), (-2), (-4), (-4)),
         },
-        """
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
@@ -180,10 +181,11 @@ if __name__ == "__main__":
                 "unswnb15/original/UNSW_NB15_testing-set.csv",
             ),
             "test": True,
+            "header": True,
             "onehot": True,
             "categorical": (2, 3, 4),
             "scheme": "all",
-            "exclude": (1),
+            "exclude": (0, 197, 198),
         },
     }
     for dataset in opts:
