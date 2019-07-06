@@ -27,10 +27,6 @@ class Handler:
                     # strip the header if it exists
                     if header:
                         del x[0]
-
-                    # convert categorical attributes to one-hot vectors
-                    if onehot:
-                        x = encode(x, categorical)
                     return np.array((x))
                 else:
                     print(ext, "file format not recognized/supported")
@@ -38,25 +34,39 @@ class Handler:
             print(e.strerror)
             return -1
 
+    def manipulate(self, x, onehot=False, categorical=[], **kwargs):
+        """
+        Manipulates attributes based on arguments
+        """
+        # convert categorical attributes to one-hot vectors
+        if onehot:
+            x = encode(x, list(categorical))
+        return x
+
     def scale(self, x, scheme, exclude, options=None, **kwargs):
         """
         Scales a dataset based on the scheme (with options)
         Available options:
         """
 
-        # ignore excluded attributes any scaling
+        # translate to absolute if exlucion indicies are relative
+        if isinstance(exclude, int) and exclude < 0:
+            exclude = set(range(x.shape[1], x.shape[1] + exclude - 1, -1))
 
+        # ignore excluded attributes any scaling
+        if isinstance(x, list):
+            features = list(set(range(x[0].shape[1])).difference(exclude))
+        else:
+            features = list(set(range(x.shape[1])).difference(exclude))
         if scheme == "all":
-            x_scale = [
-                getattr(scale, s)(x[:, :labels])
+            return [
+                getattr(scale, s)(x, features)
                 for s in dir(scale)
                 if not s.startswith("_")
             ]
-            return [np.concatenate((xs, x[:, labels:])) for xs in x_scale]
         else:
             try:
-                x_scale = [getattr(scale, scheme)(x[:, :labels], **options)]
-                return [np.concatenate((*x_scale, x[:, labels:]))]
+                return [getattr(scale, scheme)(x, features, **options)]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
@@ -102,6 +112,7 @@ class Handler:
                 opts["path"] = p
                 x.append(self.load(**opts))
             opts["path"] = paths
+            x = self.manipulate_attributes(x, **opts))
             x = self.scale(x, **opts)
             if save:
                 self.save(x, opts["path"], opts["scheme"], True)
@@ -109,12 +120,17 @@ class Handler:
         # otherwise, go dataset-by-dataset
         else:
             paths = opts["path"]
-            for p in paths:
-                opts["path"] = p
+            excludes = opts["exclude"]
+            for i in range(len(paths)):
+
+                # set any dataset-specific parameters
+                opts["path"] = paths[i]
+                opts["exclude"] = excludes[i]
                 x = self.load(**opts)
+                x = self.manipulate(x, **opts)
                 x = self.scale(x, **opts)
                 if save:
-                    self.save(x, p, opts["scheme"], False)
+                    self.save(x, opts["path"], opts["scheme"], False)
         return x
 
 
@@ -135,6 +151,7 @@ if __name__ == "__main__":
     handler = Handler()
     os.chdir("..")
     opts = {
+        """
         "dgd": {
             "path": (
                 "dgd/original/FixedObstruction_e6.csv",
@@ -146,15 +163,16 @@ if __name__ == "__main__":
             "test": False,
             "header": True,
             "scheme": "all",
-            "exlude": [[-4], [-4], [-2], [-4], [-4]]
+            "exclude": ((-4), (-4), (-2), (-4), (-4)),
         },
+        """
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
             "onehot": True,
-            "categorical": [1, 2, 3],
+            "categorical": (1, 2, 3),
             "scheme": "all",
-            "exclude": [-2]
+            "exclude": (-2),
         },
         "unswnb15": {
             "path": (
@@ -163,9 +181,9 @@ if __name__ == "__main__":
             ),
             "test": True,
             "onehot": True,
-            "categorical": [2, 3, 4],
+            "categorical": (2, 3, 4),
             "scheme": "all",
-            "exclude": [1]
+            "exclude": (1),
         },
     }
     for dataset in opts:
