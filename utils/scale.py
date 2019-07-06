@@ -8,7 +8,7 @@ in as a list.
 """
 
 
-def identity(x, **kwargs):
+def raw(x, **kwargs):
     """
     Simply returns the dataset itself
     """
