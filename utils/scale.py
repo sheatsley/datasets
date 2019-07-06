@@ -8,6 +8,13 @@ in as a list.
 """
 
 
+def identity(x, **kwargs):
+    """
+    Simply returns the dataset itself
+    """
+    return x
+
+
 def normalization(x, features, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0
