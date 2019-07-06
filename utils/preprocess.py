@@ -11,6 +11,11 @@ def encode(x, features):
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import OneHotEncoder
 
-    return ColumnTransformer(
+    encoder = ColumnTransformer(
         [("", OneHotEncoder(), features)], remainder="passthrough"
-        ).fit_transform(x)
+    )
+    if isinstance(x, list):
+        scaler.fit(x[0])
+        return scaler.transform(x[0]), scaler.transform(x[1])
+    else:
+        return scaler.fit_transform(x)
