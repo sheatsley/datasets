@@ -149,10 +149,8 @@ if __name__ == "__main__":
     - scheme: feature scaling schema (schema listed above)
     - exclude: exclude features from any feature scaling (post-onehot indicies)
     """
-    import os
 
     handler = Handler()
-    os.chdir("..")
     opts = {
         "dgd": {
             "path": (
