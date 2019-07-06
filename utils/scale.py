@@ -28,7 +28,7 @@ def normalization(x, features, **kwargs):
         return scaler.fit_transform(x)
 
 
-def rescale(x, feautures, minimum=0, maximum=1, **kwargs):
+def rescale(x, features, minimum=0, maximum=1, **kwargs):
     """
     Rescales attributes to range [minimum, maximum]
 
@@ -39,14 +39,14 @@ def rescale(x, feautures, minimum=0, maximum=1, **kwargs):
     from sklearn.preprocessing import MinMaxScaler
 
     scaler = ColumnTransformer(
-        [("", MinMaxScaler(feature_range=(minimum, minimum)), features)],
+        [("", MinMaxScaler(feature_range=(minimum, maximum)), features)],
         remainder="passthrough",
     )
     if isinstance(x, list):
         scaler.fit(x[0])
         return scaler.transform(x[0]), scaler.transform(x[1])
     else:
-        return scaler.fix_transform(x)
+        return scaler.fit_transform(x)
 
 
 def robust_scale(
