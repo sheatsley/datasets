@@ -8,14 +8,17 @@ def encode(x, features):
     """
     Encodes categorical features as a one-hot array
     """
+    from numpy import concatenate
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import OneHotEncoder
 
     encoder = ColumnTransformer(
-        [("", OneHotEncoder(), features)], remainder="passthrough"
+        [("", OneHotEncoder(sparse=False), features)],
+        remainder="passthrough",
+        n_jobs=-1,
     )
     if isinstance(x, list):
-        scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        encoder.fit(concatenate(x))
+        return [encoder.transform(x[0]), encoder.transform(x[1])]
     else:
-        return scaler.fit_transform(x)
+        return encoder.fit_transform(x)
