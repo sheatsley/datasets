@@ -8,7 +8,7 @@ in as a list.
 """
 
 
-def raw(x, **kwargs):
+def raw(x, features, **kwargs):
     """
     Simply returns the dataset itself
     """
