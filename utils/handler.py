@@ -27,7 +27,7 @@ class Handler:
                     # strip the header if it exists
                     if header:
                         del x[0]
-                    return np.array((x), dtype=)
+                    return np.array((x))
                 else:
                     print(ext, "file format not recognized/supported")
         except OSError as e:
