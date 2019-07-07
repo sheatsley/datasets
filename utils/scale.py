@@ -26,15 +26,17 @@ def normalization(x, features, **kwargs):
     from sklearn.preprocessing import StandardScaler
 
     scaler = ColumnTransformer(
-        [("", StandardScaler(with_std=False), features)],
-        remainder="passthrough",
-        n_jobs=-1,
+        [("", StandardScaler(with_std=False), features)], n_jobs=-1
     )
     if isinstance(x, list):
         scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        x[0][:, features], x[1][:, features] = [
+            scaler.transform(x[0]),
+            scaler.transform(x[1]),
+        ]
     else:
-        return scaler.fit_transform(x)
+        x[:, features] = scaler.fit_transform(x)
+    return x
 
 
 def rescale(x, features, minimum=0, maximum=1, **kwargs):
@@ -48,15 +50,17 @@ def rescale(x, features, minimum=0, maximum=1, **kwargs):
     from sklearn.preprocessing import MinMaxScaler
 
     scaler = ColumnTransformer(
-        [("", MinMaxScaler(feature_range=(minimum, maximum)), features)],
-        remainder="passthrough",
-        n_jobs=-1,
+        [("", MinMaxScaler(feature_range=(minimum, maximum)), features)], n_jobs=-1
     )
     if isinstance(x, list):
         scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        x[0][:, features], x[1][:, features] = [
+            scaler.transform(x[0]),
+            scaler.transform(x[1]),
+        ]
     else:
-        return scaler.fit_transform(x)
+        x[:, features] = scaler.fit_transform(x)
+    return x
 
 
 def robust_scale(
@@ -86,14 +90,17 @@ def robust_scale(
                 features,
             )
         ],
-        remainder="passthrough",
         n_jobs=-1,
     )
     if isinstance(x, list):
         scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        x[0][:, features], x[1][:, features] = [
+            scaler.transform(x[0]),
+            scaler.transform(x[1]),
+        ]
     else:
-        return scaler.fit_transform(x)
+        x[:, features] = scaler.fit_transform(x)
+    return x
 
 
 def standardization(x, features, **kwargs):
@@ -106,14 +113,16 @@ def standardization(x, features, **kwargs):
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import StandardScaler
 
-    scaler = ColumnTransformer(
-        [("", StandardScaler(), features)], remainder="passthrough", n_jobs=-1
-    )
+    scaler = ColumnTransformer([("", StandardScaler(), features)], n_jobs=-1)
     if isinstance(x, list):
         scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        x[0][:, features], x[1][:, features] = [
+            scaler.transform(x[0]),
+            scaler.transform(x[1]),
+        ]
     else:
-        return scaler.fit_transform(x)
+        x[:, features] = scaler.fit_transform(x)
+    return x
 
 
 def unit_norm(x, features, p="l2", **kwargs):
@@ -126,11 +135,13 @@ def unit_norm(x, features, p="l2", **kwargs):
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import Normalizer
 
-    scaler = ColumnTransformer(
-        [("", Normalizer(norm=p), features)], remainder="passthrough", n_jobs=-1
-    )
+    scaler = ColumnTransformer([("", Normalizer(norm=p), features)], n_jobs=-1)
     if isinstance(x, list):
         scaler.fit(x[0])
-        return scaler.transform(x[0]), scaler.transform(x[1])
+        x[0][:, features], x[1][:, features] = [
+            scaler.transform(x[0]),
+            scaler.transform(x[1]),
+        ]
     else:
-        return scaler.fit_transform(x)
+        x[:, features] = scaler.fit_transform(x)
+    return x
