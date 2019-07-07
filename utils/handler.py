@@ -98,8 +98,8 @@ class Handler:
             save_path = org_path.split("/")[0] + "/numpy/"
             pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
             dataset = org_path.split("/")[-1].split(".")[0].lower()
-            for s in schema:
-                np.save(save_path.lower() + dataset + "_" + s, x)
+            for idx, s in enumerate(schema):
+                np.save(save_path.lower() + dataset + "_" + s, x[idx])
         return 0
 
     def prep(self, opts, save=True):
