@@ -7,7 +7,7 @@ class which handles unique preprocessing requirements flexibly.
 import csv
 import numpy as np
 import pathlib
-from preprocess import encode
+from preprocess import encode_attributes, encode_labels
 import scale
 
 
@@ -27,20 +27,28 @@ class Handler:
                     # strip the header if it exists
                     if header:
                         del x[0]
-                    return np.array((x))
+                    return np.array((x), dtype=)
                 else:
                     print(ext, "file format not recognized/supported")
         except OSError as e:
             print(e.strerror)
             return -1
 
-    def manipulate(self, x, onehot=False, categorical=[], **kwargs):
+    def manipulate(self, x, label=False, onehot=False, categorical=[], **kwargs):
         """
         Manipulates attributes based on arguments
         """
+
+        # convert categorical labels to integers
+        if label:
+             x = encode_labels(x, label)
+
+        # unicode is very expensive -- convert to numeric datatype
+        x = x.astype('float64')
+
         # convert categorical attributes to one-hot vectors
         if onehot:
-            x = encode(x, list(categorical))
+            x = encode_attributes(x, list(categorical))
         return x
 
     def scale(self, x, scheme, exclude, options=None, **kwargs):
@@ -168,6 +176,7 @@ if __name__ == "__main__":
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
+            "label": (-2)
             "onehot": True,
             "categorical": (1, 2, 3),
             "scheme": "all",
@@ -180,6 +189,7 @@ if __name__ == "__main__":
             ),
             "test": True,
             "header": True,
+            "label": (-2)
             "onehot": True,
             "categorical": (2, 3, 4),
             "scheme": "all",
