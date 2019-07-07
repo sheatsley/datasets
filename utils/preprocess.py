@@ -13,15 +13,35 @@ def encode_attributes(x, features):
     from sklearn.preprocessing import OneHotEncoder
 
     encoder = ColumnTransformer(
-        [("", OneHotEncoder(sparse=False), features)],
-        remainder="passthrough",
-        n_jobs=-1,
+        [("", OneHotEncoder(sparse=False), features)], n_jobs=-1
     )
     if isinstance(x, list):
         encoder.fit(concatenate(x))
-        return [encoder.transform(x[0]), encoder.transform(x[1])]
+
+        # insert encodings at appropriate indicies (TODO: could be more general)
+        return [
+            concatenate(
+                (
+                    x[0][:, : features[0]],
+                    encoder.transform(x[0]),
+                    x[0][:, features[-1] + 1 :],
+                ),
+                axis=1,
+            ),
+            concatenate(
+                (
+                    x[1][:, : features[0]],
+                    encoder.transform(x[1]),
+                    x[1][:, features[-1] + 1 :],
+                ),
+                axis=1,
+            ),
+        ]
     else:
-        return encoder.fit_transform(x)
+        return concatenate(
+            (x[:, : features[0]], encoder.fit_transform(x), x[:, features[-1] + 1 :]),
+            axis=1,
+        )
 
 
 def encode_labels(x, features):
@@ -30,15 +50,13 @@ def encode_labels(x, features):
     """
     from numpy import concatenate
     from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import LabelEncoder
+    from sklearn.preprocessing import OrdinalEncoder
 
-    encoder = ColumnTransformer(
-        [("", LabelEncoder(), features)],
-        remainder="passthrough",
-        n_jobs=-1,
-    )
+    encoder = ColumnTransformer([("", OrdinalEncoder(), features)], n_jobs=-1)
     if isinstance(x, list):
         encoder.fit(concatenate(x))
-        return [encoder.transform(x[0]), encoder.transform(x[1])]
+        x[0][:, features] = encoder.transform(x[0])
+        x[1][:, features] = encoder.transform(x[1])
     else:
-        return encoder.fit_transform(x)
+        x[:, features] = encoder.fit_transform(x)
+    return x
