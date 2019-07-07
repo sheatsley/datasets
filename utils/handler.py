@@ -41,9 +41,16 @@ class Handler:
 
         # convert categorical labels to integers
         if label:
-             x = encode_labels(x, label)
 
-        # unicode is very expensive -- convert to numeric datatype
+            # translate to absolute if label index is relative
+            if label < 0:
+                if isinstance(x, list):
+                    label = x[0].shape[1] + label -1
+                else:
+                    label = x.shape[1] + label -1
+             x = encode_labels(x, list(label))
+
+        # UTF8 is space expensive -- convert to numeric datatype
         x = x.astype('float64')
 
         # convert categorical attributes to one-hot vectors
@@ -64,7 +71,7 @@ class Handler:
             else:
                 exclude = set(range(x.shape[1], x.shape[1] + exclude - 1, -1))
 
-        # ignore excluded attributes any scaling
+        # ignore excluded attributes from any scaling
         if isinstance(x, list):
             features = list(set(range(x[0].shape[1])).difference(exclude))
         else:
