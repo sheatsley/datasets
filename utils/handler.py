@@ -176,7 +176,7 @@ if __name__ == "__main__":
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
-            "label": (-2)
+            "label": (-2),
             "onehot": True,
             "categorical": (1, 2, 3),
             "scheme": "all",
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             ),
             "test": True,
             "header": True,
-            "label": (-2)
+            "label": (-2),
             "onehot": True,
             "categorical": (2, 3, 4),
             "scheme": "all",
