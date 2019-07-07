@@ -39,24 +39,26 @@ class Handler:
         Manipulates attributes based on arguments
         """
 
-        # convert categorical labels to integers
+        # convert categorical labels to integers 
         if label:
 
-            # translate to absolute if label index is relative
+            # translate to absolute if excluded indicies are relative
             if label < 0:
                 if isinstance(x, list):
-                    label = x[0].shape[1] + label -1
+                    label = x[0].shape[1] + label
                 else:
-                    label = x.shape[1] + label -1
-             x = encode_labels(x, list(label))
-
-        # UTF8 is space expensive -- convert to numeric datatype
-        x = x.astype('float64')
+                    label = x.shape[1] + label
+            x = encode_labels(x, [label])
 
         # convert categorical attributes to one-hot vectors
         if onehot:
             x = encode_attributes(x, list(categorical))
-        return x
+
+        # UTF-8 is space expensive -- convert to numeric datatype
+        if isinstance(x, list):
+            return [x[0].astype('float64'), x[1].astype('float64')]
+        else:
+            return x.astype('float64')
 
     def scale(self, x, scheme, exclude, options=None, **kwargs):
         """
