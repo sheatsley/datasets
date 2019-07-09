@@ -4,6 +4,7 @@ Most datasets are uniquely preprocessed. This module defines a generic handler
 class which handles unique preprocessing requirements flexibly.
 
 """
+import copy
 import csv
 import numpy as np
 import pathlib
@@ -79,14 +80,16 @@ class Handler:
         else:
             features = list(set(range(x.shape[1])).difference(exclude))
         if scheme == "all":
+
+            # deep copy because it could be a list of numpy arrays
             return [
-                getattr(scale, s)(x, features)
+                getattr(scale, s)(copy.deepcopy(x), features)
                 for s in dir(scale)
                 if not s.startswith("_")
             ]
         else:
             try:
-                return [getattr(scale, scheme)(x, features, **options)]
+                return [getattr(scale, scheme)(copy.deepcopy(x), features, **options)]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
