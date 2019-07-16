@@ -20,9 +20,9 @@ ENV LC_ALL en_US.UTF-8
 
 USER user 
 
-COPY --chown=user:user dgd/numpy/ user/datasets
 COPY --chown=user:user nslkdd/numpy/ user/datasets
 COPY --chown=user:user unswnb15/numpy/ user/datasets
+COPY --chown=user:user dgd/numpy/ user/datasets
 
 WORKDIR user/
 
