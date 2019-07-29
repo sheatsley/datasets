@@ -125,7 +125,7 @@ def standardization(x, features, **kwargs):
     return x
 
 
-def unit_norm(x, features, p="l2", **kwargs):
+def unit_norm(x, features, p="l1", **kwargs):
     """
     Scales attributes so that ||x||_p = 1
 
