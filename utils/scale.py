@@ -125,23 +125,35 @@ def standardization(x, features, **kwargs):
     return x
 
 
-def unit_norm(x, features, p="l1", **kwargs):
+def unit_norm(x, features, p="l1", single="rescale", **kwargs):
     """
     Scales attributes so that ||x||_p = 1
 
     Defined as: 
         x' = x / ||x||_p
+    
+    Feature groups that only contain one feature are
+    instead scaled with [single] parameter
     """
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import Normalizer
 
-    scaler = ColumnTransformer([("", Normalizer(norm=p), features)], n_jobs=-1)
-    if isinstance(x, list):
-        scaler.fit(x[0])
-        x[0][:, features], x[1][:, features] = [
-            scaler.transform(x[0]),
-            scaler.transform(x[1]),
-        ]
-    else:
-        x[:, features] = scaler.fit_transform(x)
+    # for homogenous code, overwrite definition of features
+    for features in kwargs["norm"]:
+
+        # check the norm ranges; use l_p norm if it is a range
+        if len(features) > 1:
+            scaler = ColumnTransformer([("", Normalizer(norm=p), features)], n_jobs=-1)
+            if isinstance(x, list):
+                scaler.fit(x[0])
+                x[0][:, features], x[1][:, features] = [
+                    scaler.transform(x[0]),
+                    scaler.transform(x[1]),
+                ]
+            else:
+                x[:, features] = scaler.fit_transform(x)
+
+        # otherwise, use scheme defined by [single]
+        else:
+            x = globals()[single](x, features, **kwargs)
     return x
