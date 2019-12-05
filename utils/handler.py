@@ -40,7 +40,7 @@ class Handler:
         Manipulates attributes based on arguments
         """
 
-        # convert categorical labels to integers 
+        # convert categorical labels to integers
         if label:
 
             # translate to absolute if excluded indicies are relative
@@ -57,14 +57,13 @@ class Handler:
 
         # UTF-8 is space expensive -- convert to numeric datatype
         if isinstance(x, list):
-            return [x[0].astype('float64'), x[1].astype('float64')]
+            return [x[0].astype("float64"), x[1].astype("float64")]
         else:
-            return x.astype('float64')
+            return x.astype("float64")
 
-    def scale(self, x, scheme, exclude, options=None, **kwargs):
+    def normalize(self, x, scheme, exclude, **kwargs):
         """
-        Scales a dataset based on the scheme (with options)
-        Available options:
+        Scales a dataset based on the scheme
         """
 
         # translate to absolute if excluded indicies are relative
@@ -83,13 +82,13 @@ class Handler:
 
             # deep copy because it could be a list of numpy arrays
             return [
-                getattr(scale, s)(copy.deepcopy(x), features)
+                getattr(scale, s)(copy.deepcopy(x), features, **kwargs)
                 for s in dir(scale)
                 if not s.startswith("_")
             ]
         else:
             try:
-                return [getattr(scale, scheme)(copy.deepcopy(x), features, **options)]
+                return [getattr(scale, scheme)(copy.deepcopy(x), features, **kwargs)]
             except AttributeError:
                 print(scheme, "not found")
                 return -1
@@ -151,7 +150,7 @@ class Handler:
                 opts["exclude"] = excludes[i]
                 x = self.load(**opts)
                 x = self.manipulate(x, **opts)
-                x = self.scale(x, **opts)
+                x = self.normalize(x, **opts)
                 if save:
                     self.save(x, opts["path"], opts["scheme"], False)
         return x
@@ -164,9 +163,11 @@ if __name__ == "__main__":
     - path: path to the dataset to load
     - test: whether or not a dedicated test set exists
     - header: whether or not a header row exists (which will be removed)
+    - label: index of the label (post-onehot indicies)
     - onehot: if categorical features should be converted to onehot vectors
     - categorical: list of categorical indicies to onehot encode
     - scheme: feature scaling schema (schema listed above)
+    - norm: range of features to be norm'd together for unit_norm scaling scheme
     - exclude: exclude features from any feature scaling (post-onehot indicies)
     """
 
@@ -183,8 +184,11 @@ if __name__ == "__main__":
             "test": False,
             "header": True,
             "scheme": "all",
-            "exclude": ((-4), (-4), (-2), (-4), (-4)),
+            "norm": (list(range(0, 8)), [8], [9]),
+            "exclude": ((-2), (-2), (-2), (-2), (-2)),
         },
+    }
+    """
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
@@ -208,6 +212,7 @@ if __name__ == "__main__":
             "exclude": (0, 197, 198),
         },
     }
+    """
     for dataset in opts:
         handler.prep(opts[dataset])
         print(dataset, "converted")
