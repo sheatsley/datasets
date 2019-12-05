@@ -173,7 +173,18 @@ if __name__ == "__main__":
 
     handler = Handler()
     opts = {
-        "dgd": {
+        "dgd-4": {
+            "path": (
+                "dgd/original/Exp_NoObst_124.csv",
+                "dgd/original/Exp_Obst_124.csv",
+            ),
+            "test": False,
+            "header": True,
+            "scheme": "all",
+            "norm": (list(range(0, 4)),),
+            "exclude": ((-2), (-2)),
+        },
+        "dgd-8": {
             "path": (
                 "dgd/original/FixedObstruction_e6.csv",
                 "dgd/original/FixedObstruction_e7.csv",
@@ -187,8 +198,6 @@ if __name__ == "__main__":
             "norm": (list(range(0, 8)), [8], [9]),
             "exclude": ((-2), (-2), (-2), (-2), (-2)),
         },
-    }
-    """
         "nslkdd": {
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "test": True,
@@ -212,7 +221,6 @@ if __name__ == "__main__":
             "exclude": (0, 197, 198),
         },
     }
-    """
     for dataset in opts:
         handler.prep(opts[dataset])
         print(dataset, "converted")
