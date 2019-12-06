@@ -175,8 +175,8 @@ if __name__ == "__main__":
     opts = {
         "dgd-4": {
             "path": (
-                "dgd/original/Exp_NoObst_124.csv",
-                "dgd/original/Exp_Obst_124.csv",
+                "dgd/original/ExpNoObst_124.csv",
+                "dgd/original/ExpObst_124.csv",
             ),
             "test": False,
             "header": True,
