@@ -138,7 +138,11 @@ def unit_norm(x, features, p="l1", single="rescale", **kwargs):
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import Normalizer
 
-    # for homogenous code, overwrite definition of features
+    # if this isn't defined, then unit_norm probably won't make sense
+    if "norm" not in kwargs:
+        kwargs["norm"] = [features]
+
+    # for homogenous code, overwrite definition of features (if appropriate)
     for features in kwargs["norm"]:
 
         # check the norm ranges; use l_p norm if it is a range
