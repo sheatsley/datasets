@@ -135,7 +135,7 @@ class Handler:
                 x.append(self.load(**opts))
             opts["path"] = paths
             x = self.manipulate(x, **opts)
-            x = self.scale(x, **opts)
+            x = self.normalize(x, **opts)
             if save:
                 self.save(x, opts["path"], opts["scheme"], True)
 
