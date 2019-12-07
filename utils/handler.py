@@ -142,11 +142,13 @@ class Handler:
         # otherwise, go dataset-by-dataset
         else:
             paths = opts["path"]
+            norms = opts["norm"]
             excludes = opts["exclude"]
             for i in range(len(paths)):
 
                 # set any dataset-specific parameters
                 opts["path"] = paths[i]
+                opts["norm"] = norms[i]
                 opts["exclude"] = excludes[i]
                 x = self.load(**opts)
                 x = self.manipulate(x, **opts)
@@ -174,14 +176,11 @@ if __name__ == "__main__":
     handler = Handler()
     opts = {
         "dgd-4": {
-            "path": (
-                "dgd/original/ExpNoObst_124.csv",
-                "dgd/original/ExpObst_124.csv",
-            ),
+            "path": ("dgd/original/ExpNoObst_124.csv", "dgd/original/ExpObst_124.csv"),
             "test": False,
             "header": True,
             "scheme": "all",
-            "norm": (list(range(0, 4)),),
+            "norm": ((list(range(0, 4)),), (list(range(0, 4)),)),
             "exclude": ((-2), (-2)),
         },
         "dgd-8": {
@@ -195,7 +194,13 @@ if __name__ == "__main__":
             "test": False,
             "header": True,
             "scheme": "all",
-            "norm": (list(range(0, 8)), [8], [9]),
+            "norm": (
+                (list(range(0, 8)), [8], [9]),
+                (list(range(0, 8)), [8], [9]),
+                (list(range(0, 8)),),
+                (list(range(0, 8)), [8], [9]),
+                (list(range(0, 8)), [8], [9]),
+            ),
             "exclude": ((-2), (-2), (-2), (-2), (-2)),
         },
         "nslkdd": {
