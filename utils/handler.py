@@ -195,8 +195,8 @@ if __name__ == "__main__":
             "header": True,
             "scheme": "all",
             "norm": (
-                (list(range(0, 8)), [8], [9]),
-                (list(range(0, 8)), [8], [9]),
+                (list(range(0, 8)),),
+                (list(range(0, 8)),),
                 (list(range(0, 8)),),
                 (list(range(0, 8)), [8], [9]),
                 (list(range(0, 8)), [8], [9]),
