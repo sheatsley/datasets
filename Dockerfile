@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   locales \
   python3 \
   python3-pip \
-  && apt-get clean \
+  texlive-full \
   && rm -rf /var/lib/apt/lists* \
   && locale-gen en_US.UTF-8 \
   && useradd -m user
