@@ -15,7 +15,7 @@ RUN pip3 install \
   matplotlib \
   numpy \
   scikit-learn \
-  tensorflow-gpu \
+  tensorflow \
   torch \
   torchvision
 
