@@ -14,7 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install \
   matplotlib \
   numpy \
-  scikit-learn 
+  scikit-learn \
+  tensorflow-gpu \
+  torch \
+  torchvision
 
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
