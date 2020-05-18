@@ -1,21 +1,19 @@
 """ 
-
 This module contains different attribute scaling techniques. At present, these
 functions are simply scikit-learn wrappers. These functions expect scaling
 attributes of one dataset wrt another (e.g., testing wrt training) to be passed
 in as a list.
-
 """
 
 
-def raw(x, features, **kwargs):
+def raw(x, features, test, **kwargs):
     """
     Simply returns the dataset itself
     """
     return x
 
 
-def normalization(x, features, **kwargs):
+def normalization(x, features, test, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0
 
@@ -28,18 +26,12 @@ def normalization(x, features, **kwargs):
     scaler = ColumnTransformer(
         [("", StandardScaler(with_std=False), features)], n_jobs=-1
     )
-    if isinstance(x, list):
-        scaler.fit(x[0])
-        x[0][:, features], x[1][:, features] = [
-            scaler.transform(x[0]),
-            scaler.transform(x[1]),
-        ]
-    else:
-        x[:, features] = scaler.fit_transform(x)
+    scaler.fit(x[: kwargs["size"]] if test else x)
+    x[:, features] = scaler.transform(x)
     return x
 
 
-def rescale(x, features, minimum=0, maximum=1, **kwargs):
+def rescale(x, features, test, minimum=0, maximum=1, **kwargs):
     """
     Rescales attributes to range [minimum, maximum]
 
@@ -52,19 +44,13 @@ def rescale(x, features, minimum=0, maximum=1, **kwargs):
     scaler = ColumnTransformer(
         [("", MinMaxScaler(feature_range=(minimum, maximum)), features)], n_jobs=-1
     )
-    if isinstance(x, list):
-        scaler.fit(x[0])
-        x[0][:, features], x[1][:, features] = [
-            scaler.transform(x[0]),
-            scaler.transform(x[1]),
-        ]
-    else:
-        x[:, features] = scaler.fit_transform(x)
+    scaler.fit(x[: kwargs["size"]] if test else x)
+    x[:, features] = scaler.transform(x)
     return x
 
 
 def robust_scale(
-    x, features, minimum=25.0, maximum=75.0, center=True, scale=True, **kwargs
+    x, features, test, minimum=25.0, maximum=75.0, center=True, scale=True, **kwargs
 ):
     """
     Normalize/standardize attributes according to the interquartile range
@@ -92,18 +78,12 @@ def robust_scale(
         ],
         n_jobs=-1,
     )
-    if isinstance(x, list):
-        scaler.fit(x[0])
-        x[0][:, features], x[1][:, features] = [
-            scaler.transform(x[0]),
-            scaler.transform(x[1]),
-        ]
-    else:
-        x[:, features] = scaler.fit_transform(x)
+    scaler.fit(x[: kwargs["size"]] if test else x)
+    x[:, features] = scaler.transform(x)
     return x
 
 
-def standardization(x, features, **kwargs):
+def standardization(x, features, test, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0 and std(x) = 1
 
@@ -114,50 +94,37 @@ def standardization(x, features, **kwargs):
     from sklearn.preprocessing import StandardScaler
 
     scaler = ColumnTransformer([("", StandardScaler(), features)], n_jobs=-1)
-    if isinstance(x, list):
-        scaler.fit(x[0])
-        x[0][:, features], x[1][:, features] = [
-            scaler.transform(x[0]),
-            scaler.transform(x[1]),
-        ]
-    else:
-        x[:, features] = scaler.fit_transform(x)
+    scaler.fit(x[: kwargs["size"]] if test else x)
+    x[:, features] = scaler.transform(x)
     return x
 
 
-def unit_norm(x, features, p="l1", single="rescale", **kwargs):
+def unit_norm(x, features, p="l1", other="rescale", **kwargs):
     """
     Scales attributes so that ||x||_p = 1
 
     Defined as: 
         x' = x / ||x||_p
     
-    Feature groups that only contain one feature are
-    instead scaled with [single] parameter
+    Attribtues that are not included are instead scaled via [other]
     """
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import Normalizer
 
-    # if this isn't defined, then unit_norm probably won't make sense
-    if "norm" not in kwargs:
-        kwargs["norm"] = [features]
+    # if no features are specified, scale all according to [other]
+    try:
+        scaler = ColumnTransformer(
+            [("", Normalizer(norm=p), kwargs["norm"])], n_jobs=-1
+        )
+        x[:, kwargs["norm"]] = scaler.fit_transform(x)
 
-    # for homogenous code, overwrite definition of features (if appropriate)
-    for features in kwargs["norm"]:
-
-        # check the norm ranges; use l_p norm if it is a range
-        if len(features) > 1:
-            scaler = ColumnTransformer([("", Normalizer(norm=p), features)], n_jobs=-1)
-            if isinstance(x, list):
-                scaler.fit(x[0])
-                x[0][:, features], x[1][:, features] = [
-                    scaler.transform(x[0]),
-                    scaler.transform(x[1]),
-                ]
-            else:
-                x[:, features] = scaler.fit_transform(x)
-
-        # otherwise, use scheme defined by [single]
-        else:
-            x = globals()[single](x, features, **kwargs)
-    return x
+        # scale other attributes via [other]
+        return globals()[other](
+            x,
+            tuple(
+                (feature for feature in features if feature not in set(kwargs["norm"]))
+            ),
+            **kwargs
+        )
+    except:
+        return globals()[other](x, features, **kwargs)
