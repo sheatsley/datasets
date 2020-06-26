@@ -5,6 +5,7 @@ Thu May 14 2020
 """
 
 import arff
+import copy
 import numpy as np
 import pathlib
 from preprocess import encode_attributes, encode_labels
@@ -64,7 +65,7 @@ class Handler:
         try:
             return (
                 [
-                    getattr(scale, s)(x, features, **kwargs)
+                    getattr(scale, s)(copy.copy(x), features, **kwargs)
                     for s in dir(scale)
                     if not s.startswith("_")
                 ]
