@@ -34,7 +34,7 @@ class Handler:
             print(path, e.strerror)
             return -1
 
-    def preprocess(self, x, onehot=(), preserve=(), **kwargs):
+    def preprocess(self, x, special=True, onehot=(), preserve=(), **kwargs):
         """
         Manipulates attributes based on arguments
         """
@@ -44,7 +44,14 @@ class Handler:
             x, [label if label >= 0 else label + x.shape[1] for label in preserve]
         )
 
-        # encode cateogirical attributes as one-hot vectors (must be sequential)
+        # save a special representation of the data with categoricals encoded as ints
+        if onehot and special:
+            kwargs["scheme"] = "special"
+            x = encode_labels(x, onehot)
+            self.save([[x.astype(np.float32)]], **kwargs)
+            kwargs["scheme"] = "all"
+
+        # encode categorical attributes as one-hot vectors (must be sequential)
         if onehot:
             x = encode_attributes(x, onehot)
         return x.astype(np.float32)
