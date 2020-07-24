@@ -8,7 +8,7 @@ import arff
 import copy
 import numpy as np
 import pathlib
-from preprocess import encode_attributes, encode_labels
+from utilities import encode_attributes, encode_labels, can_cast
 import scale
 
 
@@ -20,12 +20,12 @@ class Handler:
         try:
             with open(path) as f:
                 return (
-                    np.array(arff.load(f)["data"], dtype=np.string_)
+                    np.array(arff.load(f)["data"], dtype=np.unicode_)
                     if "arff" == path.split(".")[-1]
                     else np.genfromtxt(
                         f,
                         delimiter=",",
-                        dtype=np.string_,
+                        dtype=np.unicode_,
                         skip_header=header,
                         usecols=include,
                     )
@@ -39,20 +39,26 @@ class Handler:
         Manipulates attributes based on arguments
         """
 
-        # encode labels as ints & convert relative indicies to absolute, if necessary
-        x = encode_labels(
-            x, [label if label >= 0 else label + x.shape[1] for label in preserve]
-        )
-
-        # save a special representation of the data with categoricals encoded as ints
-        if onehot and special:
-            kwargs["scheme"] = "special"
-            x = encode_labels(x, onehot)
-            self.save([[x.astype(np.float32)]], **kwargs)
-            kwargs["scheme"] = "all"
+        # encode labels as ints (if not numerical) & convert relative indicies to absolute
+        if not can_cast(
+            x[:, [label if label >= 0 else label + x.shape[1] for label in preserve]]
+        ):
+            x = encode_labels(
+                x, [label if label >= 0 else label + x.shape[1] for label in preserve]
+            )
 
         # encode categorical attributes as one-hot vectors (must be sequential)
         if onehot:
+
+            # save a special representation of the data with categoricals encoded as ints
+            if special:
+                self.save(
+                    [[encode_labels(copy.copy(x), onehot).astype(np.float32)]],
+                    kwargs["path"],
+                    "special",
+                    kwargs["test"],
+                    **{"size": kwargs["size"]} if kwargs["test"] else {},
+                )
             x = encode_attributes(x, onehot)
         return x.astype(np.float32)
 
@@ -135,9 +141,9 @@ class Handler:
                                 for path in opts["path"]
                             ]
                         ),
-                        **opts
+                        **opts,
                     ),
-                    **opts
+                    **opts,
                 )
             ]
         else:
@@ -146,7 +152,7 @@ class Handler:
                     self.preprocess(
                         self.load(path, opts["header"], opts["include"]), **opts
                     ),
-                    **opts
+                    **opts,
                 )
                 for path in opts["path"]
             ]
@@ -175,13 +181,13 @@ if __name__ == "__main__":
     opts = {
         "dgd-4": {
             "header": True,
-            "include": tuple(x for x in range(9) if x not in set((6, 7))),
+            "include": tuple(x for x in range(9) if x not in set((5, 6, 7))),
             "norm": range(4),
             "path": (
                 "dgd/original/Exp_NoObst_124_current.csv",
                 "dgd/original/Exp_Obst_124.csv",
             ),
-            "preserve": (-1, -2, -3),
+            "preserve": (-1, -2),
             "scheme": "all",
             "test": False,
         },
