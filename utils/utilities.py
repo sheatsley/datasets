@@ -1,7 +1,7 @@
 """ 
-This module contains different attribute preprocessing techniques. The first
-few functions are simply scikit-learn wrappers, while the others are one-off
-pieces of code to handle any dataset particulars.
+This module contains different attribute preprocessing and utility functions.
+The first few functions are simply scikit-learn wrappers, while the others are
+one-off pieces of code to handle any dataset particulars.
 """
 
 
@@ -33,6 +33,19 @@ def encode_labels(x, features):
     encoder = ColumnTransformer([("", OrdinalEncoder(), features)], n_jobs=-1)
     x[:, features] = encoder.fit_transform(x)
     return x
+
+
+def can_cast(x):
+    """
+    Checks if x can be cast as a float
+    """
+    import numpy as np
+
+    try:
+        x.astype(np.float)
+        return True
+    except ValueError:
+        return False
 
 
 def nslkdd():
