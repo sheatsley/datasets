@@ -17,7 +17,7 @@ def normalization(x, features, test, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0
 
-    Defined as: 
+    Defined as:
         x' = (x - mean(x))/(max(x) - min(x))
     """
     from sklearn.compose import ColumnTransformer
@@ -35,7 +35,7 @@ def rescale(x, features, test, minimum=0, maximum=1, **kwargs):
     """
     Rescales attributes to range [minimum, maximum]
 
-    Defined as: 
+    Defined as:
         x' = (x - min(x))/(max(x) - min(x))
     """
     from sklearn.compose import ColumnTransformer
@@ -55,11 +55,11 @@ def robust_scale(
     """
     Normalize/standardize attributes according to the interquartile range
 
-    Defined as one of: 
+    Defined as one of:
         1) x' = (x - mean(x))/(max(x) - min(x)) (scale == False)
         2) x' = (x - mean(x))/std(x)
     where mean(x), max(x), min(x), and std(x) are subject to:
-        minimum quantile < x < maximum quantile 
+        minimum quantile < x < maximum quantile
     """
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import RobustScaler
@@ -87,7 +87,7 @@ def standardization(x, features, test, **kwargs):
     """
     Normalizes attributes so that mean(X) = 0 and std(x) = 1
 
-    Defined as: 
+    Defined as:
         x' = (x - mean(x))/std(x)
     """
     from sklearn.compose import ColumnTransformer
@@ -103,9 +103,9 @@ def unit_norm(x, features, p="l1", other="rescale", **kwargs):
     """
     Scales attributes so that ||x||_p = 1
 
-    Defined as: 
+    Defined as:
         x' = x / ||x||_p
-    
+
     Attribtues that are not included are instead scaled via [other]
     """
     from sklearn.compose import ColumnTransformer
@@ -114,7 +114,7 @@ def unit_norm(x, features, p="l1", other="rescale", **kwargs):
     # if no features are specified, scale all according to [other]
     try:
         scaler = ColumnTransformer(
-            [("", Normalizer(norm=p), kwargs["norm"])], n_jobs=-1
+            [("", Normalizer(norm=p), list(kwargs["norm"]))], n_jobs=-1
         )
         x[:, kwargs["norm"]] = scaler.fit_transform(x)
 
