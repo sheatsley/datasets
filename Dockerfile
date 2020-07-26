@@ -30,6 +30,7 @@ ENV LC_ALL en_US.UTF-8
 USER user 
 
 COPY --chown=user:user dgd/numpy/ user/datasets/dgd/numpy/
+COPY --chown=user:user mnist/numpy/ user/datasets/mnist/numpy/
 COPY --chown=user:user nslkdd/numpy/ user/datasets/nslkdd/numpy/
 COPY --chown=user:user phishing/numpy/ user/datasets/phishing/numpy/
 COPY --chown=user:user unswnb15/numpy/ user/datasets/unswnb15/numpy/
