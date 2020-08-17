@@ -208,7 +208,7 @@ if __name__ == "__main__":
         },
         "nslkdd": {
             "header": False,
-            "include": tuple(x for x in range(43) if x not in set((42,))),
+            "include": tuple(x for x in range(43) if x not in set((19, 42,))),
             "onehot": (1, 2, 3),
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "preserve": (-1,),
