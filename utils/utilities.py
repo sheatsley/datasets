@@ -73,4 +73,13 @@ def nslkdd():
         for index, new_label in indicies:
             data[index, -1] = new_label
         save("../datasets/nslkdd/numpy/" + dataset, data)
+    datasets = listdir("../datasets/slimkdd/numpy/")
+    for dataset in datasets:
+        data = load("../datasets/slimkdd/numpy/" + dataset)
+        indicies = []
+        for new_label, old_label in enumerate(mappings):
+            indicies.append((argwhere(isin(data[:, -1], old_label)), new_label))
+        for index, new_label in indicies:
+            data[index, -1] = new_label
+        save("../datasets/slimkdd/numpy/" + dataset, data)
     return
