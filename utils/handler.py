@@ -238,7 +238,7 @@ if __name__ == "__main__":
             "include": tuple(
                 x
                 for x in range(43)
-                if x in set((4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3))
+                if x in set((4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41))
             ),
             "onehot": (0,),
             "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
