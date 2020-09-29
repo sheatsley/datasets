@@ -209,8 +209,8 @@ if __name__ == "__main__":
         "drebin": {
             "header": False,
             "include": tuple(x for x in range(9)),
-            "path": "drebin/original/drebin.csv",
-            "preserve": (-1),
+            "path": ("drebin/original/drebin.csv",),
+            "preserve": (-1,),
             "scheme": "all",
             "test": False,
         },
