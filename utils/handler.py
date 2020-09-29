@@ -233,6 +233,20 @@ if __name__ == "__main__":
             "scheme": "all",
             "test": False,
         },
+        "slimkdd": {
+            "header": False,
+            "include": tuple(
+                x
+                for x in range(43)
+                if x in set((4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3))
+            ),
+            "onehot": (0,),
+            "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
+            "preserve": (-1,),
+            "scheme": "all",
+            "size": 125973,
+            "test": True,
+        },
         "unswnb15": {
             "header": True,
             "include": tuple(x for x in range(45) if x not in set((0, 44))),
