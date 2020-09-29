@@ -227,6 +227,7 @@ if __name__ == "__main__":
         "phishing": {
             "header": False,
             "include": tuple(x for x in range(49)),
+            "onehot": (42, 43, 44, 45, 46, 47),
             "path": ("phishing/original/Phishing_Legitimate_full.arff",),
             "preserve": (-1,),
             "scheme": "all",
