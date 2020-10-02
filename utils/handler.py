@@ -20,7 +20,7 @@ class Handler:
         try:
             with open(path) as f:
                 return (
-                    np.array(arff.load(f)["data"], dtype=np.unicode_)
+                    np.array(arff.load(f)["data"], dtype=np.unicode_)[:, include]
                     if "arff" == path.split(".")[-1]
                     else np.genfromtxt(
                         f,
@@ -226,8 +226,8 @@ if __name__ == "__main__":
         },
         "phishing": {
             "header": False,
-            "include": tuple(x for x in range(49)),
-            "onehot": (42, 43, 44, 45, 46, 47),
+            "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
+            "onehot": (7, 8, 9),
             "path": ("phishing/original/Phishing_Legitimate_full.arff",),
             "preserve": (-1,),
             "scheme": "all",
@@ -235,11 +235,7 @@ if __name__ == "__main__":
         },
         "slimkdd": {
             "header": False,
-            "include": tuple(
-                x
-                for x in range(43)
-                if x in set((4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41))
-            ),
+            "include": (4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41),
             "onehot": (0,),
             "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
             "preserve": (-1,),
