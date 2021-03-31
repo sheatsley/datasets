@@ -179,42 +179,6 @@ if __name__ == "__main__":
 
     handler = Handler()
     """
-        "dgd-4": {
-            "header": True,
-            "include": tuple(x for x in range(9) if x not in set((5, 6, 7))),
-            "norm": range(4),
-            "path": (
-                "dgd/original/Exp_NoObst_124_current.csv",
-                "dgd/original/Exp_Obst_124.csv",
-            ),
-            "preserve": (-1, -2),
-            "scheme": "all",
-            "test": False,
-        },
-        "dgd-8": {
-            "header": True,
-            "include": tuple(x for x in range(12) if x not in set((8, 9))),
-            "norm": range(8),
-            "path": (
-                "dgd/original/FixedObstruction_e6.csv",
-                "dgd/original/FixedObstruction_e7.csv",
-                "dgd/original/OriginalDataset_e6.csv",
-                "dgd/original/RandomObstruction_e6.csv",
-                "dgd/original/RandomObstruction_e7.csv",
-            ),
-            "preserve": (-1, -2),
-            "scheme": "all",
-            "test": False,
-        },
-        "phishing": {
-            "header": False,
-            "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
-            "onehot": (7, 8, 9),
-            "path": ("phishing/original/Phishing_Legitimate_full.arff",),
-            "preserve": (-1,),
-            "scheme": "all",
-            "test": False,
-        },
         "slimkdd": {
             "header": False,
             "include": (4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41),
@@ -227,9 +191,18 @@ if __name__ == "__main__":
         },
     """
     opts = {
+        "phishing": {
+            "header": False,
+            "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
+            "onehot": (7, 8, 9),
+            "path": ("phishing/original/Phishing_Legitimate_full.arff",),
+            "preserve": (-1,),
+            "scheme": "all",
+            "test": False,
+        },
         "dgd-4": {
             "header": True,
-            "include": tuple(x for x in range(9) if x not in set((5, 6, 7))),
+            "include": tuple(x for x in range(6)),
             "norm": range(4),
             "path": (
                 "dgd/original/Exp_NoObst_124.csv",
@@ -241,7 +214,7 @@ if __name__ == "__main__":
         },
         "dgd-8": {
             "header": True,
-            "include": tuple(x for x in range(12) if x not in set((8, 9))),
+            "include": tuple(x for x in range(10)),
             "norm": range(8),
             "path": (
                 "dgd/original/FixedObstruction_e6.csv",
@@ -294,15 +267,6 @@ if __name__ == "__main__":
             "scheme": "all",
             "size": 175341,
             "test": True,
-        },
-        "phishing": {
-            "header": False,
-            "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
-            "onehot": (7, 8, 9),
-            "path": ("phishing/original/Phishing_Legitimate_full.arff",),
-            "preserve": (-1,),
-            "scheme": "all",
-            "test": False,
         },
     }
     for dataset in opts:
