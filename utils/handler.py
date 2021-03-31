@@ -220,7 +220,6 @@ if __name__ == "__main__":
                 "cifar-10-batches-py/test_batch",
             ),
             "pickled": True,
-            "concat": True,
             "preserve": (-1,),
             "size": 50000,
             "scheme": "all",
