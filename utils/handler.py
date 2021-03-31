@@ -178,7 +178,7 @@ if __name__ == "__main__":
     """
 
     handler = Handler()
-    opts = {
+    """
         "dgd-4": {
             "header": True,
             "include": tuple(x for x in range(9) if x not in set((5, 6, 7))),
@@ -206,24 +206,6 @@ if __name__ == "__main__":
             "scheme": "all",
             "test": False,
         },
-        "drebin": {
-            "header": False,
-            "include": tuple(x for x in range(9)),
-            "path": ("drebin/original/drebin.csv",),
-            "preserve": (-1,),
-            "scheme": "all",
-            "test": False,
-        },
-        "nslkdd": {
-            "header": False,
-            "include": tuple(x for x in range(43) if x not in set((19, 42,))),
-            "onehot": (1, 2, 3),
-            "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
-            "preserve": (-1,),
-            "scheme": "all",
-            "size": 125973,
-            "test": True,
-        },
         "phishing": {
             "header": False,
             "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
@@ -243,6 +225,48 @@ if __name__ == "__main__":
             "size": 125973,
             "test": True,
         },
+    """
+    opts = {
+        "dgd-4": {
+            "header": True,
+            "include": tuple(x for x in range(9) if x not in set((5, 6, 7))),
+            "norm": range(4),
+            "path": (
+                "dgd/original/Exp_NoObst_124_current.csv",
+                "dgd/original/Exp_Obst_124.csv",
+            ),
+            "preserve": (-1, -2),
+            "scheme": "all",
+            "test": False,
+        },
+        "drebin": {
+            "header": False,
+            "include": tuple(x for x in range(9)),
+            "path": ("drebin/original/drebin.csv",),
+            "preserve": (-1,),
+            "scheme": "all",
+            "test": False,
+        },
+        "nslkdd": {
+            "header": False,
+            "include": tuple(
+                x
+                for x in range(43)
+                if x
+                not in set(
+                    (
+                        19,
+                        42,
+                    )
+                )
+            ),
+            "onehot": (1, 2, 3),
+            "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
+            "preserve": (-1,),
+            "scheme": "all",
+            "size": 125973,
+            "test": True,
+        },
         "unswnb15": {
             "header": True,
             "include": tuple(x for x in range(45) if x not in set((0, 44))),
@@ -255,6 +279,15 @@ if __name__ == "__main__":
             "scheme": "all",
             "size": 175341,
             "test": True,
+        },
+        "phishing": {
+            "header": False,
+            "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
+            "onehot": (7, 8, 9),
+            "path": ("phishing/original/Phishing_Legitimate_full.arff",),
+            "preserve": (-1,),
+            "scheme": "all",
+            "test": False,
         },
     }
     for dataset in opts:
