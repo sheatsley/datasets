@@ -42,3 +42,5 @@ Dataset](http://www.fcsit.unimas.my/research/legit-phish-set),
 `python3 utils/handler.py`. While this code has been successful at handling a
 handful of unique datasets I have used, this is obviously research-level code;
 I am sure some instances will break. 
+
+For CiFar10, download the python version [here](https://www.cs.toronto.edu/~kriz/cifar.html), unzip the file, and move the folder to this directory. 

@@ -10,26 +10,35 @@ import numpy as np
 import pathlib
 from utilities import encode_attributes, encode_labels, can_cast
 import scale
+import pickle
 
 
 class Handler:
-    def load(self, path, header, include):
+    def load(self, path, header, include, pickled):
         """
         Loads original dataset into memory.
         """
         try:
-            with open(path) as f:
-                return (
-                    np.array(arff.load(f)["data"], dtype=np.unicode_)[:, include]
-                    if "arff" == path.split(".")[-1]
-                    else np.genfromtxt(
+            with open(path, "rb" if pickled else "r") as f:
+                if pickled:
+                    dict = pickle.load(f, encoding="bytes")
+                    return np.concatenate(
+                        (
+                            np.array(dict[b"data"])[:, include],
+                            np.expand_dims(np.array(dict[b"labels"]), axis=1),
+                        ),
+                        axis=1,
+                    )
+                elif "arff" == path.split(".")[-1]:
+                    return np.array(arff.load(f)["data"], dtype=np.unicode_)[:, include]
+                else:
+                    return np.genfromtxt(
                         f,
                         delimiter=",",
                         dtype=np.unicode_,
                         skip_header=header,
                         usecols=include,
                     )
-                )
         except OSError as e:
             print(path, e.strerror)
             return -1
@@ -89,7 +98,7 @@ class Handler:
             print(scheme, e.strerror)
             return -1
 
-    def save(self, x, path, scheme, test, **kwargs):
+    def save(self, x, path, scheme, test, concat=False, **kwargs):
         """
         Saves dataset arrays as binary files with .npy format
         """
@@ -113,7 +122,7 @@ class Handler:
                         x[0][idy][: kwargs["size"]],
                     ),
                     np.save(
-                        (base + datasets[1] + "_" + s).lower(),
+                        (base + datasets[-1] + "_" + s).lower(),
                         x[0][idy][kwargs["size"] :],
                     ),
                 )
@@ -137,7 +146,12 @@ class Handler:
                     self.preprocess(
                         np.concatenate(
                             [
-                                self.load(path, opts["header"], opts["include"])
+                                self.load(
+                                    path,
+                                    opts["header"],
+                                    opts["include"],
+                                    opts["pickled"],
+                                )
                                 for path in opts["path"]
                             ]
                         ),
@@ -150,7 +164,10 @@ class Handler:
             x = [
                 self.normalize(
                     self.preprocess(
-                        self.load(path, opts["header"], opts["include"]), **opts
+                        self.load(
+                            path, opts["header"], opts["include"], opts["pickled"]
+                        ),
+                        **opts,
                     ),
                     **opts,
                 )
@@ -191,11 +208,30 @@ if __name__ == "__main__":
         },
     """
     opts = {
+        "cifar10": {
+            "header": False,
+            "include": tuple(x for x in range(3072)),
+            "path": (
+                "cifar-10-batches-py/data_batch_1",
+                "cifar-10-batches-py/data_batch_2",
+                "cifar-10-batches-py/data_batch_3",
+                "cifar-10-batches-py/data_batch_4",
+                "cifar-10-batches-py/data_batch_5",
+                "cifar-10-batches-py/test_batch",
+            ),
+            "pickled": True,
+            "concat": True,
+            "preserve": (-1,),
+            "size": 50000,
+            "scheme": "all",
+            "test": True,
+        },
         "phishing": {
             "header": False,
             "include": (4, 13, 24, 26, 33, 34, 38, 44, 46, 47, 48),
             "onehot": (7, 8, 9),
             "path": ("phishing/original/Phishing_Legitimate_full.arff",),
+            "pickled": False,
             "preserve": (-1,),
             "scheme": "all",
             "test": False,
@@ -208,6 +244,7 @@ if __name__ == "__main__":
                 "dgd/original/Exp_NoObst_124.csv",
                 "dgd/original/Exp_Obst_124.csv",
             ),
+            "pickled": False,
             "preserve": (-1, -2),
             "scheme": "all",
             "test": False,
@@ -223,6 +260,7 @@ if __name__ == "__main__":
                 "dgd/original/RandomObstruction_e6.csv",
                 "dgd/original/RandomObstruction_e7.csv",
             ),
+            "pickled": False,
             "preserve": (-1, -2),
             "scheme": "all",
             "test": False,
@@ -231,6 +269,7 @@ if __name__ == "__main__":
             "header": False,
             "include": tuple(x for x in range(9)),
             "path": ("drebin/original/drebin.csv",),
+            "pickled": False,
             "preserve": (-1,),
             "scheme": "all",
             "test": False,
@@ -250,6 +289,7 @@ if __name__ == "__main__":
             ),
             "onehot": (1, 2, 3),
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
+            "pickled": False,
             "preserve": (-1,),
             "scheme": "all",
             "size": 125973,
@@ -263,6 +303,7 @@ if __name__ == "__main__":
                 "unswnb15/original/UNSW_NB15_training-set.csv",
                 "unswnb15/original/UNSW_NB15_testing-set.csv",
             ),
+            "pickled": False,
             "preserve": (-1,),
             "scheme": "all",
             "size": 175341,
