@@ -61,8 +61,9 @@ class Handler:
 
             # save a special representation of the data with categoricals encoded as ints
             if special:
+                elout = encode_labels(copy.copy(x), onehot)
                 self.save(
-                    [[encode_labels(copy.copy(x), onehot).astype(np.float32)]],
+                    [[elout.astype(np.float32)]],
                     kwargs["path"],
                     "special",
                     kwargs["test"],
@@ -195,19 +196,18 @@ if __name__ == "__main__":
     """
 
     handler = Handler()
-    """
+    opts = {
         "slimkdd": {
             "header": False,
-            "include": (4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41),
+            "include": (3, 4, 5, 6, 12, 25, 26, 29, 30, 38, 39, 41),
             "onehot": (0,),
             "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
             "preserve": (-1,),
+            "pickled": False,
             "scheme": "all",
             "size": 125973,
             "test": True,
         },
-    """
-    opts = {
         "cifar10": {
             "header": False,
             "include": tuple(x for x in range(3072)),
