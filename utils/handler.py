@@ -99,7 +99,7 @@ class Handler:
             print(scheme, e.strerror)
             return -1
 
-    def save(self, x, path, scheme, test, concat=False, **kwargs):
+    def save(self, x, path, scheme, test, rename=None, **kwargs):
         """
         Saves dataset arrays as binary files with .npy format
         """
@@ -111,10 +111,16 @@ class Handler:
             else [scheme]
         )
 
+        if rename is None:
+            base = path[0].split("/")[0] + "/numpy/"
+            datasets = [p.split("/")[-1].split(".")[0] for p in path]
+            pathlib.Path(base).mkdir(parents=True, exist_ok=True)
+        else:
+            # parents = true will also create any missing parent directories if needed
+            base = rename[0].split("/")[0] + "/numpy/"
+            pathlib.Path(base).mkdir(parents=True, exist_ok=True)
+            datasets = [p.split("/")[-1].split(".")[0] for p in rename]
         # save the datasets (name parsing is reliant on the existence of an extension)
-        base = path[0].split("/")[0] + "/numpy/"
-        datasets = [p.split("/")[-1].split(".")[0] for p in path]
-        pathlib.Path(base).mkdir(parents=True, exist_ok=True)
         if test:
             [
                 (
@@ -220,6 +226,7 @@ if __name__ == "__main__":
                 "cifar-10-batches-py/test_batch",
             ),
             "pickled": True,
+            "rename": ("cifar10/cifar10train", "cifar10/cifar10test"),
             "preserve": (-1,),
             "size": 50000,
             "scheme": "all",
