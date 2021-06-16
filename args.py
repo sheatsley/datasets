@@ -4,9 +4,12 @@ Author: Ryan Sheatsley
 Tue May 25 2021
 """
 import argparse  # Parser for command-line options, arguments and sub-commands
+import pathlib  # Object-oriented filesystem paths
+import sys  # System-specific parameters and functions
 
 # TODO
 # ensure number of ouputs match number of inputs
+# add categories for standizaration
 
 
 def parse_args():
@@ -18,48 +21,86 @@ def parse_args():
     :rtype: ArgumentParser
     """
     p = argparse.ArgumentParser(
-        description="Retrieves and processes popular machine learning datasets."
+        description="Retrieves and processes popular machine learning datasets.",
+        prog="mlds",
     )
 
     # mandatory arguments
-    p.add_argument("dataset", help="dataset to retrieve and process")
+    p.add_argument("dataset", help="dataset to retrieve and process", nargs="+")
 
     # optional arguments
     p.add_argument(
         "-i",
         "--include",
+        action="append",
         help="column (or indicies) to keep",
-        nargs="+",
+        nargs="*",
         metavar="FEATURE",
+        default=[],
     )
     p.add_argument(
-        "--outdir", help="output directory", type=pathlib.PAth, default="out"
+        "-n",
+        "--name",
+        help="output file names",
+        nargs="+",
+        metavar="DATASET_NAME",
     )
+
     p.add_argument(
-        "-o", "--output", help="output file names", nargs="+", action="append", metavar="DATASET_NAME"
+        "--outdir", default="out", help="output directory", type=pathlib.Path
     )
+
     p.add_argument(
         "-s",
         "--scheme",
+        action="append",
+        default=[],
         help="feature manipulation scheme(s) to apply",
-        nargs="+",
+        nargs="*",
     )
 
     # flags
     p.add_argument(
-        "-a", "--analytics", help="compute basic data analytics", action="store_true"
+        "-a",
+        "--analytics",
+        action="store_true",
+        help="compute basic data analytics",
     )
     p.add_argument(
         "--destupefy",
-        help="cleanup datasets automagically (experimental)",
         action="store_true",
+        help="cleanup datasets automagically (experimental)",
     )
-    p.add_argument("-v", "--verbose", help="increase verbosity", action="store_true")
     p.add_argument(
-        "--version", help="displays module version", action="version", version="3.0"
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="increase verbosity",
     )
-    return p
+    p.add_argument(
+        "--version", action="version", help="displays module version", version="3.0"
+    )
+    return p.parse_args()
 
 
 if __name__ == "__main__":
+    """
+    Example usage of MachineLearningDataSets via the command-line as:
+
+        $ mlds mnist nslkdd -i 50-700 -i protocol flag --outdir datasets
+            -n mnist_mod nslkdd_mod -s normalization -s standardization minmax
+            -a --destupefy
+
+    This (1) downloads MNIST and NSL-KDD, (2) selects all features for MNIST
+    (necessary to correctly associate the following "-i" with NSL-KDD) and
+    "protocol" & "flag" for NSL-KDD, (3) specifies an alternative output
+    directory (instead of "out/"), (4) changes the base dataset name when
+    saved, (5) applies minmax scaling to MNIST and creates two copies of the
+    NSL-KDD that are standardization & normalized, respectively, and (6)
+    computes basic analytics and applies destupification (to both datasets).
+    """
+    sys.argv = "args.py mnist nslkdd -i -i protocol flag --outdir datasets\
+            -n mnist_mod nslkdd_mod -s minmax -s standardize normalize\
+            -a --destupefy".split()
+    print(parse_args())
     raise SystemExit(0)
