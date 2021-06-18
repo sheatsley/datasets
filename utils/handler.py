@@ -32,6 +32,7 @@ class Handler:
                 elif "arff" == path.split(".")[-1]:
                     return np.array(arff.load(f)["data"], dtype=np.unicode_)[:, include]
                 else:
+                    print("loading")
                     return np.genfromtxt(
                         f,
                         delimiter=",",
@@ -47,6 +48,7 @@ class Handler:
         """
         Manipulates attributes based on arguments
         """
+        print("in pre")
 
         # encode labels as ints (if not numerical) & convert relative indicies to absolute
         if not can_cast(
@@ -70,6 +72,7 @@ class Handler:
                     **{"size": kwargs["size"]} if kwargs["test"] else {},
                 )
             x = encode_attributes(x, onehot)
+        print("past pre")
         return x.astype(np.float32)
 
     def normalize(self, x, scheme, preserve, **kwargs):
@@ -86,6 +89,7 @@ class Handler:
             )
         )
         try:
+            print("in norm:", scheme)
             return (
                 [
                     getattr(scale, s)(copy.copy(x), features, **kwargs)
@@ -203,15 +207,17 @@ if __name__ == "__main__":
 
     handler = Handler()
     opts = {
-        "slimkdd": {
-            "header": False,
-            "include": (3, 4, 5, 6, 12, 25, 26, 29, 30, 38, 39, 41),
-            "onehot": (0,),
-            "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
-            "preserve": (-1,),
+        "cicddos2019": {
+            "header": True,
+            "include": tuple(x for x in range(74)),
+            "path": (
+                "cicddos2019/original/training.csv",
+                "cicddos2019/original/testing.csv",
+            ),
             "pickled": False,
+            "preserve": (-1,),
+            "size": 48699876,
             "scheme": "all",
-            "size": 125973,
             "test": True,
         },
         "cifar10": {
@@ -229,7 +235,7 @@ if __name__ == "__main__":
             "rename": ("cifar10/cifar10train", "cifar10/cifar10test"),
             "preserve": (-1,),
             "size": 50000,
-            "scheme": "all",
+            "scheme": "rescale",
             "test": True,
         },
         "phishing": {
@@ -296,6 +302,16 @@ if __name__ == "__main__":
             "onehot": (1, 2, 3),
             "path": ("nslkdd/original/KDDTrain+.txt", "nslkdd/original/KDDTest+.txt"),
             "pickled": False,
+            "preserve": (-1,),
+            "scheme": "all",
+            "size": 125973,
+            "test": True,
+        },
+        "slimkdd": {
+            "header": False,
+            "include": (4, 30, 5, 25, 26, 39, 38, 6, 29, 12, 3, 41),
+            "onehot": (0,),
+            "path": ("slimkdd/original/KDDTrain+.txt", "slimkdd/original/KDDTest+.txt"),
             "preserve": (-1,),
             "scheme": "all",
             "size": 125973,
