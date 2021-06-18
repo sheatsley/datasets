@@ -7,10 +7,6 @@ import argparse  # Parser for command-line options, arguments and sub-commands
 import pathlib  # Object-oriented filesystem paths
 import sys  # System-specific parameters and functions
 
-# TODO
-# ensure number of ouputs match number of inputs
-# add categories for standizaration
-
 
 def parse_args():
     """
