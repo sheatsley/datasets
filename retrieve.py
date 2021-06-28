@@ -20,6 +20,26 @@ class Downloader:
         """
         return None
 
+    def pytorch(self, dataset):
+        """
+        """
+        return
+
+    def tensorflow(self, dataset):
+        """
+        """
+        return
+
+    def uci(self, dataset):
+        """
+        """
+        return
+
+    def custom(self, dataset):
+        """
+        """
+        return
+
 
 if __name__ == "__main__":
     """
