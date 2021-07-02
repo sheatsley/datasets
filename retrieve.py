@@ -163,14 +163,41 @@ class Downloader:
             },
         }
 
-        # inititate downloads
+        # define dataset category mappings
+        self.pytorch_map = {True: "train", False: "test"}
         return None
 
     def custom(self, dataset):
         """"""
         return
 
-    def pytorch(self, dataset, splits, directory="/tmp/"):
+    def download(self, datasets):
+        """
+        This function dispatches dataset downloads to the respective handlers.
+
+        :param datasets: datasets to download
+        :type datasets: list of strings
+        :return: the downloaded datasets
+        :rtype: dictionary of datasets containing dictionaries of categories
+        """
+        downloads = {}
+        for dataset in datasets:
+            if dataset in self.pytorch_datasets:
+                downloads[dataset] = self.pytorch(
+                    self.pytorch_datasets[dataset]["name"],
+                    *self.pytorch_datasets[dataset]["split"]
+                )
+            elif dataset in self.tensorflow_datasets:
+                pass
+            elif dataset in self.uci_datasets:
+                pass
+            elif dataset in self.custom_datasets:
+                pass
+            else:
+                raise KeyError(dataset, "not supported")
+        return downloads
+
+    def pytorch(self, dataset, arg, splits, directory="/tmp/"):
         """
         This function serves as a wrapper for torchvision.datasets
         (https://pytorch.org/vision/stable/datasets.html). While this API is
@@ -182,6 +209,8 @@ class Downloader:
 
         :param dataset: a dataset from torchvision.datasets
         :type dataset: string
+        :param arg: the name of the argument governing the dataset splits
+        :type arg: string
         :param splits: list of dataset "categories" to download
         :type splits: list or NoneType
         :param directory: directory to download the datasets to
@@ -189,19 +218,18 @@ class Downloader:
         :return: numpy versions of the dataset
         :rtype: dictionary; keys are dataset types & values are numpy arrays
         """
-
-        # use keyword arguments since interfaces can differ slightly
-        args = {
-            "root": directory,
-            "download": True,
-            "transform": torchvision.transforms.ToTensor(),
-        }
-        import pdb; pdb.set_trace()
         return {
-            category: getattr(torchvision.datasets, dataset)(
-                **(args | {split: category})
+            # map splits to strings so that they are human-readable
+            self.pytorch_map.get(split, split): getattr(torchvision.datasets, dataset)(
+                # use keyword arguments since interfaces can differ slightly
+                **{
+                    "root": directory,
+                    "download": True,
+                    "transform": torchvision.transforms.ToTensor(),
+                    arg: split,
+                }
             )
-            for split, category in itertools.product(*splits)
+            for split in splits
         }
 
     def tensorflow(self, dataset):
