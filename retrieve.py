@@ -6,6 +6,7 @@ Fri Jun 18 2021
 """
 import itertools  # Functions creating iterations for efficient looping
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
+import tensorflow_datasets  # A collection of ready-to-use datasets
 from utils import print  # use timestamped print
 
 # TODO
@@ -31,26 +32,42 @@ class Downloader:
 
     def __init__(self, datasets):
         """
-        This function initializes the supported datasets from PyTorch and
-        TensorFlow (since their interfaces are not standardized). The supported
-        datasets are encoded as dictionaries of dictionaries, with the dataset
-        names as keys and, as values, a dictionary containing two keys: "name",
-        which maps the dataset name to the case-sensitive module name; and,
-        "split", which maps the the dataset "category" (e.g., training,
-        testing, validation, landmarks, outlines, etc.) parameter and possible
-        values as a tuple.
+        This function initializes the supported datasets from PyTorch and TensorFlow.
+        Details pertaining to the libraries are described below.
 
-        At this time, the following datasets are not supported:
-        - Pytorch
-            - Cityscapes (does not support downloading)
-            - MS Coco Captions (does not support downloading)
-            - MS Coco (does not support downloading)
-            - EMNIST (incompatible with this library)
-            - Flickr8k (does not support downloading)
-            - Flickr30k (does not support downloading)
-            - HMDB51 (does not support downloading)
-            - Kinetics-400 (incompatible with this library)
-            - UCF101 (does not support downloading)
+        -- PyTorch --
+        The datasets in PyTorch have non-standardized interfaces. Thus,
+        supported datasets are encoded as dictionaries of dictionaries, with
+        the dataset names as keys and, as values, a dictionary containing two
+        keys: "name", which maps the dataset name to the case-sensitive module
+        name; and, "split", which maps the the dataset "category" (e.g.,
+        training, testing, validation, landmarks, outlines, etc.) parameter and
+        possible values as a tuple.
+
+        At this time, the following PyTorch datasets are not supported:
+        - Cityscapes (does not support downloading)
+        - MS Coco Captions (does not support downloading)
+        - MS Coco (does not support downloading)
+        - EMNIST (incompatible with this library)
+        - Flickr8k (does not support downloading)
+        - Flickr30k (does not support downloading)
+        - HMDB51 (does not support downloading)
+        - Kinetics-400 (incompatible with this library)
+        - UCF101 (does not support downloading)
+
+        -- TensorFlow --
+        For TensorFlow, the interfaces are largely standardized and
+        well-defined. To this end, little additional effort is needed to
+        integrate the supported datasets into this framework. Thus, the only
+        datasets that are excluded are those that do not support downloading.
+
+        At this time, the following TensorFlow datasets are not supported:
+        Audio
+        - dementiabank (does not support downloading)
+        - savee (does not support downloading)
+        - voxceleb (does not support downloading)
+        - voxforge (does not support downloading)
+
 
         :param datasets: datasets to download
         :type datasets: list of strings
@@ -59,7 +76,7 @@ class Downloader:
         """
         self.datasets = datasets
 
-        # define supported datasets
+        # define supported pytorch datasets
         self.pytorch_datasets = {
             "caltech101": {
                 "name": "Caltech101",
@@ -163,7 +180,10 @@ class Downloader:
             },
         }
 
-        # define dataset category mappings
+        # define supported tensorflow datasets
+        self.tensorflow_datasets = {}
+
+        # define pytorch dataset category mappings
         self.pytorch_map = {True: "train", False: "test"}
         return None
 
@@ -232,9 +252,24 @@ class Downloader:
             for split in splits
         }
 
-    def tensorflow(self, dataset):
-        """"""
-        return
+    def tensorflow(self, dataset, directory="/tmp/"):
+        """
+        This function serves as a wrapper for tensorflow_datasets.
+        (https://www.tensorflow.org/datasets). The interfaces for the vast
+        majority of datasets are identical, and thus, this wrapper largely
+        prepares the data such that it conforms to the standard used throughout
+        the rest of this repository.
+
+        :param dataset: a dataset from tensorflow_datasets
+        :type dataset: string
+        :param directory: directory to download the datasets to
+        :type directory: string
+        :return: numpy versions of the dataset
+        :rtype: dictionary; keys are dataset types & values are numpy arrays
+        """
+        return tensorflow_datasets.as_numpy(
+            tensorflow_datasets.load(dataset, data_dir=directory)
+        )
 
     def uci(self, dataset):
         """"""
