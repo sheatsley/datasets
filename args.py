@@ -7,6 +7,9 @@ import argparse  # Parser for command-line options, arguments and sub-commands
 import pathlib  # Object-oriented filesystem paths
 import sys  # System-specific parameters and functions
 
+# TODO
+# - create symlinks to target dir
+# - destupify should cleanse for unknown values 
 
 def parse_args():
     """
