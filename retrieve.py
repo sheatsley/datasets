@@ -4,14 +4,13 @@ repositories.
 Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
+import custom  # Functions for retrieve arbitrary datasets
 import itertools  # Functions creating iterations for efficient looping
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
 from utils import print  # use timestamped print
 
 # TODO
-# - implement force re-download
-# - multithread datasets
 # - resolve datasets that require labels to be downloaded separetely
 # - add print statements
 
@@ -32,8 +31,20 @@ class Downloader:
 
     def __init__(self, datasets):
         """
-        This function initializes the supported datasets from PyTorch and TensorFlow.
-        Details pertaining to the libraries are described below.
+        This function initializes the supported datasets from PyTorch,
+        TensorFlow, and user-specified datasets as described in the custom.py
+        module. Details pertaining to the libraries are described below.
+
+        -- Custom --
+        The Custom class defines an interface for which the Downloader class
+        can consume and use to retrieve the desired dataset. As the interfaces
+        to retrieve these datasets can be entirely abitrary, it is on the user
+        to write templates that can properly process the dataset. As the
+        custom.py module describes, the only components that need to be
+        well-defined are (1) the URL to retrieve the dataset, (2) any
+        preprocessing directives, and (3) methods to read the dataset such that
+        it can be prepared into a numpy array. The supported datasets are described
+        in custom.py.
 
         -- PyTorch --
         The datasets in PyTorch have non-standardized interfaces. Thus,
@@ -60,6 +71,7 @@ class Downloader:
         well-defined. To this end, little additional effort is needed to
         integrate the supported datasets into this framework. Thus, the only
         datasets that are excluded are those that do not support downloading.
+        Moreover, this repo assumes the stable version of tensorflow-datasets.
 
         At this time, the following TensorFlow datasets are not supported:
         Audio
@@ -68,6 +80,50 @@ class Downloader:
         - voxceleb (does not support downloading)
         - voxforge (does not support downloading)
 
+        Images
+        - abstract_reasoning (does not support downloading)
+        - celeb_a_hq (does not support downloading)
+        - cityscapes (does not support downloading)
+
+        Image Classification
+        - curated_breast_imaging_ddsm (does not support downloading)
+        - diabetic_retinopathy_detection (does not support downloading)
+        - dmlab (does not support downloading)
+        - imagenet2012 (does not support downloading)
+        - imagenet2012_corrupted (does not support downloading)
+        - imagenet2012_real (does not support downloading)
+        - imagenet2012_subset (does not support downloading)
+        - resisc45 (does not support downloading)
+        - waymo_open_dataset (requires authorization and registration)
+
+        Summarization
+        - covid19sum (does not support downloading)
+        - newsroom (does not support downloading)
+        - samsum (does not support downloading)
+        - wikihow (does not support downloading)
+        - xsum (does not support downloading)
+
+        Text
+        - c4 (does not support downloading)
+        - reddit_disentanglement (does not support downloading)
+        - story_cloze (does not support downloading)
+
+        Translation
+        - wmt13_translate (does not support downloading)
+        - wmt14_translate (does not support downloading)
+        - wmt15_translate (does not support downloading)
+        - wmt16_translate (does not support downloading)
+        - wmt17_translate (does not support downloading)
+        - wmt18_translate (does not support downloading)
+        - wmt19_translate (does not support downloading)
+        - wmt_t2t_translate (does not support downloading)
+
+        Video
+        - tao (does not support downloading)
+        - youtube_vis (does not support downloading)
+
+        Vision Language
+        - gref (does not support downloading)
 
         :param datasets: datasets to download
         :type datasets: list of strings
@@ -75,6 +131,8 @@ class Downloader:
         :rtype: Downloader object
         """
         self.datasets = datasets
+
+        # define supported custom datasets
 
         # define supported pytorch datasets
         self.pytorch_datasets = {
@@ -181,7 +239,234 @@ class Downloader:
         }
 
         # define supported tensorflow datasets
-        self.tensorflow_datasets = {}
+        self.tensorflow_datasets = {
+            # audio
+            "accentdb",
+            "common_voice",
+            "crema_d",
+            "fuss",
+            "groove",
+            "gtzan",
+            "gtzan_music_speech",
+            "librispeech",
+            "libritts",
+            "ljspeech",
+            "nsynth",
+            "speech_commands",
+            "spoken_digit",
+            "tedlium",
+            "vctk",
+            "yes_no",
+            # graphs
+            "ogbg_molpcba",
+            # images
+            "aflw2k3d",
+            "arc",
+            "bccd",
+            "binarized_mnist",
+            "celeb_a",
+            "clevr",
+            "clic",
+            "coil100",
+            "div2k",
+            "downsampled_imagenet",
+            "dsprites",
+            "duke_ultrasound",
+            "flc",
+            "lost_and_found",
+            "lsun",
+            "nyu_depth_v2",
+            "s3o4d",
+            "scene_parse150",
+            "shapes3d",
+            "the300w_lp",
+            # image classification
+            "beans",
+            "bigearthnet",
+            "binary_alpha_digits",
+            "caltech101",
+            "caltech_birds2010",
+            "caltech_birds2011",
+            "cars196",
+            "cassava",
+            "cats_vs_dogs",
+            "cifar10",
+            "cifar100",
+            "cifar10_1",
+            "cifar10_corrupted",
+            "citrus_leaves",
+            "cmaterdb",
+            "colorectal_histology",
+            "colorectal_histology_large",
+            "cycle_gan",
+            "deep_weeds",
+            "dtd",
+            "emnist",
+            "eurostat",
+            "fashion_mnist",
+            "food101",
+            "geirhos_conflict_stimuli",
+            "horses_or_humans",
+            "i_naturalist2017",
+            "imagenet_a",
+            "imagenet_r",
+            "imagenet_resized",
+            "imagenet_v2",
+            "imagenette",
+            "imagewang",
+            "kmnist",
+            "lfw",
+            "malaria",
+            "mnist",
+            "mnist_corrupted",
+            "omniglot",
+            "oxford_flowers102" "oxford_iiit_pet" "patch_camelyon",
+            "pet_finder",
+            "places365_small",
+            "plant_leaves",
+            "plant_village",
+            "plantae_k",
+            "quickdraw_bitmap",
+            "rock_paper_scissors",
+            "siscore",
+            "smallnorb",
+            "so2sat",
+            "stanford_dogs",
+            "standford_online_products",
+            "stl10",
+            "sun397",
+            "svhn_cropped",
+            "tf_flowers",
+            "uc_merced",
+            "visual_domain_decathlon",
+            # object detection
+            "coco",
+            "coco_captions",
+            "kitti",
+            "lvis",
+            "open_images_challenge2019_detection",
+            "open_images_v4",
+            "voc",
+            "wider_face",
+            # question answering
+            "ai2_arc",
+            "ai2_arc_with_ir",
+            "coqa",
+            "cosmos_qa",
+            "mctaco",
+            "mlqa",
+            "natural_question",
+            "natural_questions_open" "qasc",
+            "squad",
+            "trivia_qa",
+            "tydi_qa",
+            "web_questions",
+            "xquad",
+            # structured
+            "cherry_blossoms",
+            "dart",
+            "e2e_cleaned",
+            "efron_morris75",
+            "forest_fires",
+            "genomics_ood",
+            "german_credit_numeric",
+            "higgs",
+            "howell",
+            "iris",
+            "movie_lens",
+            "movielens",
+            "radon",
+            "rock_you",
+            "titanic",
+            "web_nlg",
+            "wiki_bio",
+            "wiki_table_questions",
+            "wiki_table_text",
+            "wine_quality",
+            # summarization
+            "aeslc",
+            "big_patent",
+            "billsum",
+            "cnn_dailymail",
+            "gigaword",
+            "multi_news",
+            "opinion_abstracts",
+            "opinosis",
+            "reddit",
+            "reddit_tifu",
+            "scientific_papers",
+            # text
+            "ag_news_subsets",
+            "anli",
+            "blimp",
+            "bool_q",
+            "cfq",
+            "civil_comments",
+            "clinc_oos",
+            "cos_e",
+            "definite_pronoun_resolution",
+            "dolphin_umber_word",
+            "drop",
+            "eraser_multi_rc",
+            "esnli",
+            "gap",
+            "gem",
+            "glue",
+            "goemotions",
+            "gpt3",
+            "hellaswag",
+            "imdb_reviews",
+            "irc_disentanglement",
+            "lambada",
+            "librispeech_lm",
+            "lm1b",
+            "math_dataset",
+            "movie_rationales",
+            "multi_nli",
+            "multi_nli_mismatch",
+            "openbookqa",
+            "paws_wiki",
+            "paws_x_wiki",
+            "pg19",
+            "piqa",
+            "qa4mre",
+            "quac",
+            "race",
+            "salient_span_wikipedia",
+            "scan",
+            "schema_guided_dialogue",
+            "scicite",
+            "sentiment140",
+            "snli",
+            "star_cfq",
+            "super_glue",
+            "tiny_shapespeare",
+            "trec",
+            "wiki40b",
+            "wikiann",
+            "wikipedia",
+            "wikipedia_toxicity_subtypes",
+            "winogrande",
+            "wordnet",
+            "wsc273",
+            "xnli",
+            "xtreme_pawsx",
+            "xtreme_xnli",
+            "yelp_polarity_reviews",
+            # translation
+            "flores",
+            "opus",
+            "para_crawl",
+            "ted_hrlr_translate",
+            "ted_multi_translate",
+            # video
+            "bair_robot_pushing_small",
+            "davis",
+            "moving_mnist",
+            "robonet",
+            "starcraft_video",
+            "ucf101",
+        }
 
         # define pytorch dataset category mappings
         self.pytorch_map = {True: "train", False: "test"}
@@ -208,9 +493,7 @@ class Downloader:
                     *self.pytorch_datasets[dataset]["split"]
                 )
             elif dataset in self.tensorflow_datasets:
-                pass
-            elif dataset in self.uci_datasets:
-                pass
+                downloads[dataset] = self.tensorflow(dataset)
             elif dataset in self.custom_datasets:
                 pass
             else:
@@ -268,12 +551,8 @@ class Downloader:
         :rtype: dictionary; keys are dataset types & values are numpy arrays
         """
         return tensorflow_datasets.as_numpy(
-            tensorflow_datasets.load(dataset, data_dir=directory)
+            tensorflow_datasets.load(dataset, data_dir=directory, batch_size=-1)
         )
-
-    def uci(self, dataset):
-        """"""
-        return
 
 
 if __name__ == "__main__":
