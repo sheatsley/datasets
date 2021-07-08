@@ -4,10 +4,13 @@ online web resources.
 Author: Ryan Sheatsley
 Tue Jul 6 2021
 """
+import io  # Core tools for working with streams
 import numpy as np  # The fundamental package for scientific computing with Python
+import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
 import requests  # HTTP for Humans
 from utils import print  # Timestamped printing
+import zipfile  # Work with ZIP archives
 
 
 class DatasetTemplate(object):
@@ -47,7 +50,7 @@ class DatasetTemplate(object):
     def download(self, url, directory="/tmp/"):
         """
         This function uses the requests module to retrieve datasets from web
-        resources.  Designed to facilitate a simple and robust interface,
+        resources. Designed to facilitate a simple and robust interface,
         subclasses need only specify the relevant URL to download the dataset
         and this function will attempt to be as informative as possible with
         respect to any errors. A skeleton example is shown below.
@@ -74,12 +77,16 @@ class DatasetTemplate(object):
 
     def preprocess(self, data):
         """
-        This function is designed to apply any dataset-specific nuances. For
-        example, some datasets require that the labels be merged according to a
-        certain scheme, some features should be dropped (such as index), among
-        many other reasons. Concisely, "machine learning" data on the web is
-        almost never ready for models as input; this function aims to
-        essentially santize data.
+        This function is designed to apply any dataset-specific nuances.
+        Specifically, this function should be written to resolve at least two
+        dataset-specific nuances: (1) datasets can be packaged in a myrida of
+        formats, such as tarballs, zip files, JSON objects, ARFF files, among
+        others; unpacking the data appropriately should be done here, and (2)
+        some datasets require that the labels be merged according to a certain
+        scheme, some features should be dropped (such as index), among many
+        other reasons; such transformations should be done here. In many ways,
+        "machine learning" data on the web is almost never ready for models as
+        input; this function should aim to extract and santize data.
 
         :param data: the data to process
         :type data: dataset-specific
@@ -90,18 +97,21 @@ class DatasetTemplate(object):
 
     def read(self, directory="/tmp/"):
         """
-        Datasets can be packaged in a myriad of different formats, such as
-        tarballs, zip files, JSON objects, ARFF files, among many more. Thus,
-        this function should be written as to conform to the particulars of any
-        dataset. To maintain simplicity, only the directory for which the
-        dataset was downloaded to should be specified -- the folder containing
-        the dataset should be dervived from the name of the template (which is
-        necessary to dynamically inform Downloader objects from retrieve.py
-        what custom datasets are available, without hardcoding their
-        availability inside Downloader objects), which should be the name of
-        the dataset. Finally, to be compatible with the rest of the machine
-        learning datasets pipepline, read data must conform to the following
-        standard:
+        Many machine learning frameworks that have dataset-support built-in
+        often have interfaces where data is nearly ready to use; this function
+        should aim to simply read data that is nearly ready to use (i.e., via
+        preprocess) into memory. This function should be inherently simple
+        (since it is likely to be called multiple times, versus preprocess,
+        which will, on average, be called once per dataset throughout the
+        lifetime of a user) To enforce this simplicity objective, only the
+        directory for which the dataset was downloaded to should be specified
+        -- the folder containing the dataset should be dervived from the name
+        of the template (which is necessary to dynamically inform Downloader
+        objects from retrieve.py what custom datasets are available, without
+        hardcoding their availability inside Downloader objects), which should
+        be the name of the dataset. Finally, to be compatible with the rest of
+        the machine learning datasets pipepline, read data must conform to the
+        following standard:
 
         (1) If the dataset is for supervised learning, labels must be
         pointed to via the 'labels' key (as done with TensorFlow datasets).
@@ -126,7 +136,7 @@ class DatasetTemplate(object):
         }
 
 
-class NSL_KDD(DatasetTemplate):
+class NSLKDD(DatasetTemplate):
     """
     This class adds support for downloading, preprocessing, and saving the
     NSL-KDD (https://www.unb.ca/cic/datasets/nsl.html). It inherits the following
@@ -143,9 +153,10 @@ class NSL_KDD(DatasetTemplate):
 
     def __init__(self, directory="/tmp/"):
         """
-        All relevant dataset information should be defined here (e.g., the URL
-        to retrieve the dataset and the directory to save it to).
-
+        For the NSL-KDD, the relevant dataset information is (1) the URL to
+        retrieve the dataset, (2) where to save it, (3) the desired
+        files to use from the zip archive, and (4) the label
+        transformation applied in the preprocess function,
         :param directory: directory to download the datasets to
         :type directory: string
         :return: dataset template
@@ -153,7 +164,127 @@ class NSL_KDD(DatasetTemplate):
         """
         self.urls = ["http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip"]
         self.directory = directory
+        self.files = ["KDDTrain+.txt", "KDDTest+.txt"]
+        self.transform = {
+            **dict.fromkeys(
+                [
+                    "apache",
+                    "back",
+                    "land",
+                    "neptune",
+                    "pod",
+                    "processtable",
+                    "smurf",
+                    "teardrop",
+                    "udpstorm",
+                    "worm",
+                ],
+                "dos",
+            ),
+            **dict.fromkeys(
+                ["ipsweep", "mscan", "nmap", "portsweep", "saint", "satan"], "probe"
+            ),
+            **dict.fromkeys(
+                [
+                    "ftp_write",
+                    "guess_password",
+                    "httptunnel",
+                    "imap",
+                    "named",
+                    "multihop",
+                    "phf",
+                    "sendmail",
+                    "snmpgetattack",
+                    "snmpguess",
+                    "spy",
+                    "warezclient",
+                    "warezmaster",
+                    "xlock",
+                    "xsnoop",
+                ],
+                "r2l",
+            ),
+            **dict.fromkeys(
+                [
+                    "buffer_overflow",
+                    "loadmodule",
+                    "perl",
+                    "ps",
+                    "rootkit",
+                    "xterm",
+                    "sqlattack",
+                ],
+                "u2r",
+            ),
+        }
         return None
+
+    def preprocess(self, data):
+        """
+        As described in the preprocess comments for the DatasetTemplate class,
+        this function should aim to (1) extract the dataset, and (2) apply any
+        dataset-specific transformations. To this end, the NSL-KDD is (1)
+        packaged as a zip into multiple files in both plaintext and ARFF
+        formats (we will use the plaintext to support label transformation),
+        and (2) the last column (i.e. "difficulty") needs to be removed and the
+        second to last column (i.e., the attack) needs to be transformed into
+        an attack category (as is reported in nearly all papers that use the
+        NSL-KDD). The transformation is defined as:
+
+        Attack - Attack Category
+        DoS    - {apache, back, land, neptune, pod, processtable, smurf,
+                    teardrop, udpstorm, worm}
+        Probe  - {ipsweep, mscan, nmap, portsweep, saint, satan}
+        R2L    - {ftp_write, guess_password, httptunnel, imap, named, multihop,
+                    phf, sendmail, snmpgetattack, snmpguess, spy, warezclient,
+                    warezmaster, xlock, xsnoop}
+        U2R    - {buffer_overflow, loadmodule, perl, ps, rootkit, xterm,
+                    sqlattack}
+
+        :param data: the data to process
+        :type data: dataset-specific
+        :return: santized data
+        :rtype: dataset-specific
+        """
+
+        # first, unzip the archive
+        zipfile = zipfile.ZipFile(io.BytesIO(data))
+
+        path = pathlib.Path(
+            self.directory, type(self).__name__.lower(), self.urls[0].split("/")[-1]
+        )
+        path.write_bytes(data)
+
+        # mappings are benign, dos, probe, r2l, and u2r
+        """
+        mappings = [
+            [16],
+            [1, 8, 14, 19, 27, 32, 0, 33, 21, 10],
+            [25, 7, 15, 20, 11, 24],
+            [4, 3, 6, 18, 12, 35, 34, 30, 37, 38, 29, 28, 26, 13, 36],
+            [2, 9, 23, 17, 31, 39, 22, 5],
+        ]
+        datasets = listdir("../datasets/nslkdd/numpy/")
+        for dataset in datasets:
+            data = load("../datasets/nslkdd/numpy/" + dataset)
+            indicies = []
+            for new_label, old_label in enumerate(mappings):
+                indicies.append((argwhere(isin(data[:, -1], old_label)), new_label))
+            for index, new_label in indicies:
+                data[index, -1] = new_label
+            save("../datasets/nslkdd/numpy/" + dataset, data)
+        datasets = listdir("../datasets/slimkdd/numpy/")
+        for dataset in datasets:
+            data = load("../datasets/slimkdd/numpy/" + dataset)
+            indicies = []
+            for new_label, old_label in enumerate(mappings):
+                indicies.append((argwhere(isin(data[:, -1], old_label)), new_label))
+            for index, new_label in indicies:
+                data[index, -1] = new_label
+            save("../datasets/slimkdd/numpy/" + dataset, data)
+        """
+        # return the zip so that it is saved to disk
+        return data
 
 
 if __name__ == "__main__":
