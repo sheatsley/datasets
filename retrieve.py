@@ -4,18 +4,18 @@ repositories.
 Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
-import custom  # Functions for retrieve arbitrary datasets
+import custom  # Classes for retrieve arbitrary datasets
 import itertools  # Functions creating iterations for efficient looping
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
-from utils import print  # use timestamped print
+from utils import print  # Timestamped printing
 
 # TODO
 # - resolve datasets that require labels to be downloaded separetely
 # - add print statements
 
 
-class Downloader:
+class Downloader(object):
     """
     This downloader class serves as a wrapper for popular
     machine learning libraries to retrieve datasets. Moreover,
@@ -26,7 +26,6 @@ class Downloader:
     :func:`custom`: defines an interface for custom dataset downloaders
     :func:`pytorch`: retrieve datasets from torchvision
     :func:`tensorflow`: retreive datasets from tensorflow
-    :func:`uci`: retreive datasets from UCI machine learning repository
     """
 
     def __init__(self, datasets):
@@ -41,10 +40,10 @@ class Downloader:
         to retrieve these datasets can be entirely abitrary, it is on the user
         to write templates that can properly process the dataset. As the
         custom.py module describes, the only components that need to be
-        well-defined are (1) the URL to retrieve the dataset, (2) any
-        preprocessing directives, and (3) methods to read the dataset such that
-        it can be prepared into a numpy array. The supported datasets are described
-        in custom.py.
+        well-defined are (1) the URL to retrieve the dataset, (2) methods to
+        read the dataset, and (3) any preprocessing directives such that it can
+        be prepared into a numpy array. The supported datasets are described in
+        custom.py.
 
         -- PyTorch --
         The datasets in PyTorch have non-standardized interfaces. Thus,
@@ -472,8 +471,20 @@ class Downloader:
         self.pytorch_map = {True: "train", False: "test"}
         return None
 
-    def custom(self, dataset):
-        """"""
+    def custom(self, dataset, dictory="/tmp/"):
+        """
+        This function consumes a template from custom.py to retrieve datasets
+        from arbitrary network resources. It relies on the request module for
+        retrieving the dataset. Specific details of the templates can be found
+        in the custom.py module.
+
+        :param dataset: dataset defined in custom.py
+        :type dataset: string
+        :param directory: directory to download the datasets to
+        :type directory: string
+        :return: numpy versions of the dataset
+        :rtype: dictionary; keys are the dataset types & values are numpy arrays
+        """
         return
 
     def download(self, datasets):
