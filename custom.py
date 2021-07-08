@@ -47,7 +47,7 @@ class DatasetTemplate(object):
         self.directory = directory
         return None
 
-    def download(self, url, directory="/tmp/"):
+    def download(self, urls, directory="/tmp/"):
         """
         This function uses the requests module to retrieve datasets from web
         resources. Designed to facilitate a simple and robust interface,
@@ -56,7 +56,7 @@ class DatasetTemplate(object):
         respect to any errors. A skeleton example is shown below.
 
         :param url: location of dataset
-        :type url: string
+        :type url: list of strings
         :param directory: directory to download the datasets to
         :type directory: string
         :return: none
@@ -66,7 +66,7 @@ class DatasetTemplate(object):
         # create destination folder & download dataset (if necessary)
         path = pathlib.Path(directory, type(self).__name__.lower())
         path.mkdir(parents=True, exist_ok=True)
-        for url in self.urls:
+        for url in urls:
             data = path / url.split("/")[-1]
             if not data.is_file() or self.force_download:
                 print("Downloading", url, "...")
@@ -246,17 +246,25 @@ class NSLKDD(DatasetTemplate):
         :return: santized data
         :rtype: dataset-specific
         """
+        import pdb; pdb.set_trace()
+        with zipfile.ZipFile(io.BytesIO(data)) as zipped:
+            for file in self.files:
+                with zipped.open(file) as dataset:
 
-        # first, unzip the archive
-        zipfile = zipfile.ZipFile(io.BytesIO(data))
+                    # unzip and read into dataframe
+                    df = pandas.read_csv(dataset)
 
+                    # drop the last column and apply label mapping
+                    df.drop(columns=df.columns[-1], axis=1, inplace=True)
+                    df.replace({-1: self.transform}, inplace=True)
+
+        """
         path = pathlib.Path(
             self.directory, type(self).__name__.lower(), self.urls[0].split("/")[-1]
         )
         path.write_bytes(data)
 
         # mappings are benign, dos, probe, r2l, and u2r
-        """
         mappings = [
             [16],
             [1, 8, 14, 19, 27, 32, 0, 33, 21, 10],
