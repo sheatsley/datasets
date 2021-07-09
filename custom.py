@@ -13,7 +13,7 @@ from utils import print  # Timestamped printing
 import zipfile  # Work with ZIP archives
 
 
-class DatasetTemplate(object):
+class DatasetTemplate:
     """
     This dataset template class defines an interface to retrieve, open, and
     process arbitrary datasets from web resources. It is designed to work with
@@ -43,8 +43,9 @@ class DatasetTemplate(object):
         :return: dataset template
         :rtype: DatasetTemplate object
         """
-        self.urls = ["https://httpbin.org/get"]
+        self.urls = ("https://httpbin.org/get",)
         self.directory = directory
+        self.force_download = force_download
         return None
 
     def download(self, urls, directory="/tmp/"):
@@ -69,7 +70,7 @@ class DatasetTemplate(object):
         for url in urls:
             data = path / url.split("/")[-1]
             if not data.is_file() or self.force_download:
-                print("Downloading", url, "...")
+                print("Downloading", url, "to", directory, "...")
                 req = requests.get(url)
                 req.raise_for_status()
                 data.write_bytes(self.preprocess(req.content))
@@ -113,8 +114,9 @@ class DatasetTemplate(object):
         the machine learning datasets pipepline, read data must conform to the
         following standard:
 
-        (1) If the dataset is for supervised learning, labels must be
-        pointed to via the 'labels' key (as done with TensorFlow datasets).
+        (1) If the dataset is for supervised learning, labels must be pointed
+        to via the 'labels' key (as done with TensorFlow datasets), in their
+        respective data category.
         (2) Training, testing, and validation data categories must be pointed
         to via "train", "test", and "validation" keys, respectively.
         (3) If all dataset categories are disjoint in nature or if there is
@@ -151,20 +153,24 @@ class NSLKDD(DatasetTemplate):
     :func:`read`: reads the dataset into memory
     """
 
-    def __init__(self, directory="/tmp/"):
+    def __init__(self, directory="/tmp/", force_download=False):
         """
         For the NSL-KDD, the relevant dataset information is (1) the URL to
         retrieve the dataset, (2) where to save it, (3) the desired
         files to use from the zip archive, and (4) the label
         transformation applied in the preprocess function,
+
         :param directory: directory to download the datasets to
         :type directory: string
         :return: dataset template
         :rtype: DatasetTemplate object
         """
-        self.urls = ["http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip"]
-        self.directory = directory
-        self.files = ["KDDTrain+.txt", "KDDTest+.txt"]
+        super().__init__(directory, force_download)
+        self.urls = ("http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip",)
+        self.files = ("KDDTrain+.txt", "KDDTest+.txt")
+        self.categories = {
+            file: category for file, category in zip(self.files, ["train", "test"])
+        }
         self.transform = {
             **dict.fromkeys(
                 [
@@ -219,7 +225,7 @@ class NSLKDD(DatasetTemplate):
         }
         return None
 
-    def preprocess(self, data):
+    def preprocess(self, data, directory="/tmp/"):
         """
         As described in the preprocess comments for the DatasetTemplate class,
         this function should aim to (1) extract the dataset, and (2) apply any
@@ -243,56 +249,51 @@ class NSLKDD(DatasetTemplate):
 
         :param data: the data to process
         :type data: dataset-specific
+        :param directory: directory to save the datasets to
+        :type directory: string
         :return: santized data
         :rtype: dataset-specific
         """
-        import pdb; pdb.set_trace()
         with zipfile.ZipFile(io.BytesIO(data)) as zipped:
             for file in self.files:
                 with zipped.open(file) as dataset:
 
                     # unzip and read into dataframe
-                    df = pandas.read_csv(dataset)
+                    df = pandas.read_csv(dataset, header=None)
 
-                    # drop the last column and apply label mapping
-                    df.drop(columns=df.columns[-1], axis=1, inplace=True)
-                    df.replace({-1: self.transform}, inplace=True)
+                    # drop the last column, apply label mapping and save
+                    df.drop(columns=df.columns[-1], inplace=True)
+                    df.replace({df.columns[-1]: self.transform}, inplace=True)
+                    df.to_csv(
+                        pathlib.Path(directory, type(self).__name__, file), index=False
+                    )
 
-        """
-        path = pathlib.Path(
-            self.directory, type(self).__name__.lower(), self.urls[0].split("/")[-1]
-        )
-        path.write_bytes(data)
-
-        # mappings are benign, dos, probe, r2l, and u2r
-        mappings = [
-            [16],
-            [1, 8, 14, 19, 27, 32, 0, 33, 21, 10],
-            [25, 7, 15, 20, 11, 24],
-            [4, 3, 6, 18, 12, 35, 34, 30, 37, 38, 29, 28, 26, 13, 36],
-            [2, 9, 23, 17, 31, 39, 22, 5],
-        ]
-        datasets = listdir("../datasets/nslkdd/numpy/")
-        for dataset in datasets:
-            data = load("../datasets/nslkdd/numpy/" + dataset)
-            indicies = []
-            for new_label, old_label in enumerate(mappings):
-                indicies.append((argwhere(isin(data[:, -1], old_label)), new_label))
-            for index, new_label in indicies:
-                data[index, -1] = new_label
-            save("../datasets/nslkdd/numpy/" + dataset, data)
-        datasets = listdir("../datasets/slimkdd/numpy/")
-        for dataset in datasets:
-            data = load("../datasets/slimkdd/numpy/" + dataset)
-            indicies = []
-            for new_label, old_label in enumerate(mappings):
-                indicies.append((argwhere(isin(data[:, -1], old_label)), new_label))
-            for index, new_label in indicies:
-                data[index, -1] = new_label
-            save("../datasets/slimkdd/numpy/" + dataset, data)
-        """
         # return the zip so that it is saved to disk
         return data
+
+    def read(self, directory="/tmp/"):
+        """
+        As described in the read comments for the DatasetTemplate class, this
+        function adheres to the provided standard, namely: (1) labels are
+        encoded as 'labels', (2) the training and test sets are encoded as
+        'train' and 'test', respectively, and (3) the data is returned as a
+        numpy array.
+
+        :param directory: directory where the dataset is downloaded
+        :type directory: string
+        :return: the downloaded datasets
+        :rtype: dictionary; keys are the dataset types & values are numpy arrays
+        """
+        dataset = {}
+        for file in self.files:
+
+            # read in the data, split labels, and return as a dictionary
+            df = pandas.read_csv(pathlib.Path(directory, type(self).__name__, file))
+            dataset[self.categories[file]] = {
+                "data": df.drop(columns=df.columns[-1]).to_numpy(),
+                "labels": df.filter([df.columns[-1]]).to_numpy(),
+            }
+        return dataset
 
 
 if __name__ == "__main__":
