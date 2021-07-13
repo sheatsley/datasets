@@ -5,17 +5,15 @@ Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
 import custom  # Classes for retrieve arbitrary datasets
-import itertools  # Functions creating iterations for efficient looping
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
 from utils import print  # Timestamped printing
 
 # TODO
-# - resolve datasets that require labels to be downloaded separetely
 # - add print statements
 
 
-class Downloader(object):
+class Downloader:
     """
     This downloader class serves as a wrapper for popular
     machine learning libraries to retrieve datasets. Moreover,
@@ -132,6 +130,11 @@ class Downloader(object):
         self.datasets = datasets
 
         # define supported custom datasets
+        self.custom_datasets = {
+            name.lower(): dataset
+            for name in dir(custom)
+            if (dataset := isinstance(getattr(custom, dataset), type))
+        }
 
         # define supported pytorch datasets
         self.pytorch_datasets = {
@@ -479,13 +482,15 @@ class Downloader(object):
         in the custom.py module.
 
         :param dataset: dataset defined in custom.py
-        :type dataset: string
+        :type dataset: dataset object inherited by DatasetTemplate
         :param directory: directory to download the datasets to
         :type directory: string
         :return: numpy versions of the dataset
         :rtype: dictionary; keys are the dataset types & values are numpy arrays
         """
-        return
+        dataset = dataset(directory=directory)
+        dataset.download(datset.urls, dataset.directory)
+        return dataset.read(dataset.directory)
 
     def download(self, datasets):
         """
@@ -501,12 +506,12 @@ class Downloader(object):
             if dataset in self.pytorch_datasets:
                 downloads[dataset] = self.pytorch(
                     self.pytorch_datasets[dataset]["name"],
-                    *self.pytorch_datasets[dataset]["split"]
+                    *self.pytorch_datasets[dataset]["split"],
                 )
             elif dataset in self.tensorflow_datasets:
                 downloads[dataset] = self.tensorflow(dataset)
             elif dataset in self.custom_datasets:
-                pass
+                downloads[dataset] = self.custom(self.custom_datasets[dataset])
             else:
                 raise KeyError(dataset, "not supported")
         return downloads
