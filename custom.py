@@ -116,7 +116,7 @@ class DatasetTemplate:
 
         (1) If the dataset is for supervised learning, labels must be pointed
         to via the 'labels' key (as done with TensorFlow datasets), in their
-        respective data category.
+        respective data category (data must be pointed to by a 'data' key).
         (2) Training, testing, and validation data categories must be pointed
         to via "train", "test", and "validation" keys, respectively.
         (3) If all dataset categories are disjoint in nature or if there is
@@ -274,10 +274,10 @@ class NSLKDD(DatasetTemplate):
     def read(self, directory="/tmp/"):
         """
         As described in the read comments for the DatasetTemplate class, this
-        function adheres to the provided standard, namely: (1) labels are
-        encoded as 'labels', (2) the training and test sets are encoded as
-        'train' and 'test', respectively, and (3) the data is returned as a
-        numpy array.
+        function adheres to the provided standard, namely: (1) labels and data
+        are encoded as 'labels' and 'data', respectively, (2) the training and
+        test sets are encoded as 'train' and 'test', respectively, and (3) the
+        data is returned as a numpy array.
 
         :param directory: directory where the dataset is downloaded
         :type directory: string
