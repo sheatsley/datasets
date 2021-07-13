@@ -10,6 +10,7 @@ import sys  # System-specific parameters and functions
 # TODO
 # - create symlinks to target dir
 # - destupify should cleanse for unknown values 
+# - drop multiple datasets (zip -i and -s for better label-specific schema)
 
 def parse_args():
     """
