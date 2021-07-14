@@ -5,7 +5,6 @@ Author: Ryan Sheatsley
 Tue Jul 6 2021
 """
 import io  # Core tools for working with streams
-import numpy as np  # The fundamental package for scientific computing with Python
 import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
 import requests  # HTTP for Humans
@@ -20,7 +19,7 @@ class DatasetTemplate:
     the Downloader class in the retrieve.py module. The Downloader class
     expects three function definitions from all templates: (1) downloading the
     dataset, (2) reading the dataset into memory, and (3) any preprocessing
-    that must occur before it can be prepared into a numpy array. This
+    that must occur before it can be prepared into a pandas dataframe. This
     DatasetTemplate class thus defines the essential interfaces for the
     Downloader class in the retrieve.py module and also provides simple example
     usage of how custom dataset subclasses should be designed.
@@ -122,15 +121,15 @@ class DatasetTemplate:
         (3) If all dataset categories are disjoint in nature or if there is
         only a single source of data, then the key names can be arbitrary (when
         saved, the dataset names will be defined by the key names).
-        (4) All data should be returned as a numpy array.
+        (4) All data should be returned as a pandas dataframe.
 
         :param directory: directory where the dataset is downloaded
         :type directory: string
         :return: the downloaded datasets
-        :rtype: dictionary; keys are the dataset types & values are numpy arrays
+        :rtype: dictionary; keys are the dataset types & values are dataframes
         """
         return {
-            data.stem: np.array(data.read_bytes())
+            data.stem: pandas.read_json(data.read_bytes())
             for url in self.urls
             if (
                 data := pathlib.Path(directory, type(self).__name__, url.split("/")[-1])
@@ -277,12 +276,12 @@ class NSLKDD(DatasetTemplate):
         function adheres to the provided standard, namely: (1) labels and data
         are encoded as 'labels' and 'data', respectively, (2) the training and
         test sets are encoded as 'train' and 'test', respectively, and (3) the
-        data is returned as a numpy array.
+        data is returned as a pandas dataframe.
 
         :param directory: directory where the dataset is downloaded
         :type directory: string
-        :return: the downloaded datasets
-        :rtype: dictionary; keys are the dataset types & values are numpy arrays
+        :return: the downloaded datasets as a pandas dataframe
+        :rtype: dictionary; keys are the dataset types & values are dataframes
         """
         dataset = {}
         for file in self.files:
@@ -290,8 +289,8 @@ class NSLKDD(DatasetTemplate):
             # read in the data, split labels, and return as a dictionary
             df = pandas.read_csv(pathlib.Path(directory, type(self).__name__, file))
             dataset[self.categories[file]] = {
-                "data": df.drop(columns=df.columns[-1]).to_numpy(),
-                "labels": df.filter([df.columns[-1]]).to_numpy(),
+                "data": df.drop(columns=df.columns[-1]),
+                "labels": df.filter([df.columns[-1]]),
             }
         return dataset
 
