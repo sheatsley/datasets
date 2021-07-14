@@ -8,6 +8,7 @@ from utils import print  # Timestamped printing
 
 # TODO
 # - add print statements
+# - destupify should cleanse for unknown values
 
 
 class Transformer:
@@ -23,14 +24,17 @@ class Transformer:
     :func:`transform`: applies transformation schemes to the data
     """
 
-    def __init__(self, datasets, schemes, indicies):
+    def __init__(self, datasets, schemes, features):
         """
         This function initializes Transformer objects with the necessary
         information to apply arbitrary transformations to data.
 
         :param datasets: datasets to apply transformations to
-        :type datasets: list of pandas dataframes
+        :type datasets: dictionary pointing to pandas dataframes
         :param schemes: transformations to apply to the data
+        :type schemes: list of strings
+        :param features: features to apply the transformations to
+        :type features: list of integers (indicies) or strings (names)
         """
         return None
 
