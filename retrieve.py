@@ -26,7 +26,7 @@ class Downloader:
     :func:`tensorflow`: retreive datasets from tensorflow
     """
 
-    def __init__(self, datasets):
+    def __init__(self, dataset):
         """
         This function initializes the supported datasets from PyTorch,
         TensorFlow, and user-specified datasets as described in the custom.py
@@ -40,8 +40,8 @@ class Downloader:
         custom.py module describes, the only components that need to be
         well-defined are (1) the URL to retrieve the dataset, (2) methods to
         read the dataset, and (3) any preprocessing directives such that it can
-        be prepared into a numpy array. The supported datasets are described in
-        custom.py.
+        be prepared into a pandas dataframe. The supported datasets are
+        described in custom.py.
 
         -- PyTorch --
         The datasets in PyTorch have non-standardized interfaces. Thus,
@@ -122,18 +122,18 @@ class Downloader:
         Vision Language
         - gref (does not support downloading)
 
-        :param datasets: datasets to download
-        :type datasets: list of strings
+        :param datasets: dataset to download
+        :type datasets: string
         :return: downloader
         :rtype: Downloader object
         """
-        self.datasets = datasets
+        self.dataset = dataset
 
         # define supported custom datasets
         self.custom_datasets = {
             name.lower(): dataset
             for name in dir(custom)
-            if (dataset := isinstance(getattr(custom, dataset), type))
+            if (dataset := isinstance(getattr(custom, name), type))
         }
 
         # define supported pytorch datasets
@@ -485,36 +485,33 @@ class Downloader:
         :type dataset: dataset object inherited by DatasetTemplate
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: numpy versions of the dataset
-        :rtype: dictionary; keys are the dataset types & values are numpy arrays
+        :return: pandas dataframes representing the dataset
+        :rtype: dictionary; keys are dataset types & values are dataframes
         """
         dataset = dataset(directory=directory)
         dataset.download(datset.urls, dataset.directory)
         return dataset.read(dataset.directory)
 
-    def download(self, datasets):
+    def download(self, dataset):
         """
         This function dispatches dataset downloads to the respective handlers.
 
-        :param datasets: datasets to download
-        :type datasets: list of strings
-        :return: the downloaded datasets
-        :rtype: dictionary of datasets containing dictionaries of categories
+        :param dataset: dataset to download
+        :type dataset: string
+        :return: the downloaded dataset
+        :rtype: dictionary; keys are dataset types & values are dataframes
         """
-        downloads = {}
-        for dataset in datasets:
-            if dataset in self.pytorch_datasets:
-                downloads[dataset] = self.pytorch(
-                    self.pytorch_datasets[dataset]["name"],
-                    *self.pytorch_datasets[dataset]["split"],
-                )
-            elif dataset in self.tensorflow_datasets:
-                downloads[dataset] = self.tensorflow(dataset)
-            elif dataset in self.custom_datasets:
-                downloads[dataset] = self.custom(self.custom_datasets[dataset])
-            else:
-                raise KeyError(dataset, "not supported")
-        return downloads
+        if dataset in self.pytorch_datasets:
+            return self.pytorch(
+                self.pytorch_datasets[dataset]["name"],
+                *self.pytorch_datasets[dataset]["split"],
+            )
+        elif dataset in self.tensorflow_datasets:
+            return self.tensorflow(dataset)
+        elif dataset in self.custom_datasets:
+            return self.custom(self.custom_datasets[dataset])
+        else:
+            raise KeyError(dataset, "not supported")
 
     def pytorch(self, dataset, arg, splits, directory="/tmp/"):
         """
@@ -524,7 +521,7 @@ class Downloader:
         implement their own custom API (since the parameters and the values
         they can take are defined by the dataset authors). Specifically, this
         function: (1) downloads the entire dataset, (2) saves it in /tmp/, (3)
-        returns the dataset as a numpy array.
+        returns the dataset as a pandas dataframe.
 
         :param dataset: a dataset from torchvision.datasets
         :type dataset: string
@@ -534,8 +531,8 @@ class Downloader:
         :type splits: list or NoneType
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: numpy versions of the dataset
-        :rtype: dictionary; keys are dataset types & values are numpy arrays
+        :return: pandas dataframes representing the dataset
+        :rtype: dictionary; keys are dataset types & values are dataframes
         """
         return {
             # map splits to strings so that they are human-readable
@@ -563,10 +560,10 @@ class Downloader:
         :type dataset: string
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: numpy versions of the dataset
-        :rtype: dictionary; keys are dataset types & values are numpy arrays
+        :return: pandas dataframes representing the dataset
+        :rtype: dictionary; keys are dataset types & values are dataframes
         """
-        return tensorflow_datasets.as_numpy(
+        return tensorflow_datasets.as_dataframe(
             tensorflow_datasets.load(dataset, data_dir=directory, batch_size=-1)
         )
 
