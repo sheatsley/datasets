@@ -7,10 +7,6 @@ import argparse  # Parser for command-line options, arguments and sub-commands
 import pathlib  # Object-oriented filesystem paths
 import sys  # System-specific parameters and functions
 
-# TODO
-# - create symlinks to target dir
-# - destupify should cleanse for unknown values 
-# - drop multiple datasets (zip -i and -s for better label-specific schema)
 
 def parse_args():
     """
@@ -26,30 +22,35 @@ def parse_args():
     )
 
     # mandatory arguments
-    p.add_argument("dataset", help="dataset to retrieve and process", nargs="+")
+    p.add_argument("dataset", help="dataset to retrieve and process")
 
     # optional arguments
     p.add_argument(
-        "-i",
-        "--include",
+        "-f",
+        "--feature",
         action="append",
-        help="column (or indicies) to keep",
+        help="column (or indicies) to transform",
         nargs="*",
         metavar="FEATURE",
         default=[],
     )
     p.add_argument(
+        "-l",
+        "--label",
+        action="append",
+        default=[],
+        help="label manipulation scheme(s) to apply",
+        nargs="*",
+    )
+    p.add_argument(
         "-n",
         "--name",
-        help="output file names",
-        nargs="+",
+        help="output file name",
         metavar="DATASET_NAME",
     )
-
     p.add_argument(
         "--outdir", default="out", help="output directory", type=pathlib.Path
     )
-
     p.add_argument(
         "-s",
         "--scheme",
@@ -87,20 +88,21 @@ if __name__ == "__main__":
     """
     Example usage of MachineLearningDataSets via the command-line as:
 
-        $ mlds mnist nslkdd -i 50-700 -i protocol flag --outdir datasets
-            -n mnist_mod nslkdd_mod -s normalization -s standardization minmax
-            -a --destupefy
+        $ mlds nslkdd -f protocol flag -f service --outdir datasets
+            -n nslkdd_mod -s standardscaler minmaxscaler -s onehotencoder
+            -l labelencoder -a --destupefy
 
-    This (1) downloads MNIST and NSL-KDD, (2) selects all features for MNIST
-    (necessary to correctly associate the following "-i" with NSL-KDD) and
-    "protocol" & "flag" for NSL-KDD, (3) specifies an alternative output
-    directory (instead of "out/"), (4) changes the base dataset name when
-    saved, (5) applies minmax scaling to MNIST and creates two copies of the
-    NSL-KDD that are standardization & normalized, respectively, and (6)
-    computes basic analytics and applies destupification (to both datasets).
+    This (1) downloads the NSL-KDD, (2) selects "protocol" & "flag" features as
+    one group and "service" as the second group, (3) specifies an alternative
+    output directory (instead of "out/"), (4) changes the base dataset name
+    when saved, (5) creates three copies of dataset: two where "protcol" &
+    "flag" (group one) are standaridized and the other where they are rescaled,
+    and a third copy where "service" (group two) is one-hot encoded, (6)
+    encodes labels as integers for all three dataset copies, and (7) computes
+    basic analytics and applies destupification (to both dataset copies).
     """
-    sys.argv = "args.py mnist nslkdd -i -i protocol flag --outdir datasets\
-            -n mnist_mod nslkdd_mod -s minmax -s standardize normalize\
-            -a --destupefy".split()
+    sys.argv = "args.py nslkdd -f protocol flag -f service --outdir datasets\
+            -n nslkdd_mod -s standardscaler minmaxscaler -s onehotencoder\
+            -l labelencoder -a --destupefy".split()
     print(parse_args())
     raise SystemExit(0)
