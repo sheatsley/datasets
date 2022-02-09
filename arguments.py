@@ -5,7 +5,6 @@ Tue May 25 2021
 """
 import argparse  # Parser for command-line options, arguments and sub-commands
 import pathlib  # Object-oriented filesystem paths
-import sys  # System-specific parameters and functions
 
 
 def parse_args():
@@ -29,10 +28,10 @@ def parse_args():
         "-f",
         "--feature",
         action="append",
-        help="column (or indicies) to transform",
-        nargs="*",
-        metavar="FEATURE",
         default=[],
+        help="column (or indicies) to transform",
+        metavar="FEATURE",
+        nargs="*",
     )
     p.add_argument(
         "-l",
@@ -50,6 +49,12 @@ def parse_args():
     )
     p.add_argument(
         "--outdir", default="out", help="output directory", type=pathlib.Path
+    )
+    p.add_argument(
+        "-p",
+        "--precision",
+        help="maximum dataset precision",
+        default="float32",
     )
     p.add_argument(
         "-s",
@@ -95,12 +100,14 @@ if __name__ == "__main__":
     This (1) downloads the NSL-KDD, (2) selects "protocol" & "flag" features as
     one group and "service" as the second group, (3) specifies an alternative
     output directory (instead of "out/"), (4) changes the base dataset name
-    when saved, (5) creates three copies of dataset: two where "protcol" &
+    when saved, (5) creates three copies of dataset: two where "protocol" &
     "flag" (group one) are standaridized and the other where they are rescaled,
     and a third copy where "service" (group two) is one-hot encoded, (6)
     encodes labels as integers for all three dataset copies, and (7) computes
     basic analytics and applies destupification (to both dataset copies).
     """
+    import sys  # System-specific parameters and functions
+
     sys.argv = "args.py nslkdd -f protocol flag -f service --outdir datasets\
             -n nslkdd_mod -s standardscaler minmaxscaler -s onehotencoder\
             -l labelencoder -a --destupefy".split()
