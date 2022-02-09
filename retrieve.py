@@ -4,13 +4,114 @@ repositories.
 Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
-import custom  # Classes for retrieve arbitrary datasets
+import pandas  # Python Data Analysis Library
+import pathlib  # Object-oriented filesystem paths
+import requests  # HTTP for Humans
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
-from utils import print  # Timestamped printing
+from utilities import print  # Timestamped printing
 
-# TODO
-# - add print statements
+
+class BaseAdapter:
+    """
+    This BaseAdapter class defines an interface to retrieve, open, and process
+    arbitrary datasets from web resources. It is designed to work with the
+    Dataset class below. Dataset objects expect a single interface: a read
+    function which returns the dataset (as a pandas dataframe). If available,
+    Dataset objects will look for a name_map key to allow accesing features by
+    name (as well as index). Thus, this BaseAdapter class defines the essential
+    preprocesing operations to be readily consumable by Dataset objects.
+
+    :func:`__init__`: instantiates BaseAdapter objects
+    :func:`download`: retrieves datasets via HTTP through the requests module
+    :func:`preprocess`: resolves any dataset particulars
+    :func:`read`: reads the dataset into memory
+    """
+
+    def __init__(self, directory="/tmp/", force_download=False):
+        """
+        All relevant dataset information should be defined here (e.g., the URL
+        to retrieve the dataset and the directory to save it to).
+
+        :param directory: directory to download the datasets to
+        :type directory: string
+        :param force_download: redownload the data, even if it exists
+        :type force_download: boolean
+        :return: dataset template
+        :rtype: DatasetTemplate object
+        """
+        self.urls = ("https://httpbin.org/get",)
+        self.directory = directory
+        self.force_download = force_download
+        return None
+
+    def download(self):
+        """
+        This method uses the requests module to retrieve datasets from web
+        resources. Designed to facilitate a simple and robust interface,
+        subclasses need only specify the relevant URL to download the dataset.
+
+        :param url: location of dataset
+        :type url: list of strings
+        :param directory: directory to download the datasets to
+        :type directory: string
+        :return: the dataset (as partitions)
+        :rtype: list of bytes
+        """
+
+        # create destination folder & download dataset (if necessary)
+        path = pathlib.Path(self.directory, type(self).__name__.lower())
+        path.mkdir(parents=True, exist_ok=True)
+        partitions = []
+        for url in self.urls:
+            data = path / url.split("/")[-1]
+            if not data.is_file() or self.force_download:
+                print(f"Downloading {url} to {self.directory}...")
+                req = requests.get(url)
+                req.raise_for_status()
+                data.write_bytes(req.content)
+            partitions.append(data.read_bytes())
+        return partitions
+
+    def preprocess(self, data):
+        """
+        This method applies any dataset-specific nuances. Specifically, it
+        should perform two functions: (1) data unpacking (be it, tarballs, JSON
+        objects, ARFF files, etc.), and (2) any particular data transformations
+        (such as manipulating labels, dropping features, etc.) Machine learning
+        data is rarely "model-ready"; this function should make it so.
+
+        :param data: the data to process
+        :type data: dataset-specific
+        :return: santized data
+        :rtype: dataset-specific
+        """
+        return data
+
+    def read(self):
+        """
+        This method defines the exclusive interface expected by Dataset
+        objects. Thus, this method should download (if necessary), prepare, and
+        return the dataset as a pandas dataframe. Importantly, the read data
+        msut conform to the following standard:
+
+        (1) If the dataset is for supervised learning, labels must be pointed
+        to via the 'labels' key (as done with TensorFlow datasets), in their
+        respective data category (data must be pointed to by a 'data' key).
+        (2) Training, testing, and validation data categories must be pointed
+        to via "train", "test", and "validation" keys, respectively.
+        (3) If all dataset categories are disjoint in nature or if there is
+        only a single source of data, then the key names can be arbitrary (when
+        saved, the dataset names will be defined by the key names).
+        (4) All data should be returned as a pandas dataframe.
+
+        :return: the downloaded datasets
+        :rtype: dictionary; keys are the dataset types & values are dataframes
+        """
+        return {
+            url.split("/")[-1]: pandas.read_json(data)
+            for url, data in zip(self.urls, self.preprocess(self.download))
+        }
 
 
 class Downloader:
@@ -474,7 +575,7 @@ class Downloader:
         self.pytorch_map = {True: "train", False: "test"}
         return None
 
-    def custom(self, dataset, dictory="/tmp/"):
+    def custom(self, dataset, directory="/tmp/"):
         """
         This function consumes a template from custom.py to retrieve datasets
         from arbitrary network resources. It relies on the request module for
@@ -489,7 +590,7 @@ class Downloader:
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
         dataset = dataset(directory=directory)
-        dataset.download(datset.urls, dataset.directory)
+        dataset.download(dataset.urls, dataset.directory)
         return dataset.read(dataset.directory)
 
     def download(self, dataset):
