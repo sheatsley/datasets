@@ -18,7 +18,7 @@ def print(*args, **kwargs):
     :return: None
     :rtype: NoneType
     """
-    return builtins.print("[" + time.asctime() + "]", *args, **kwargs)
+    return builtins.print(f"[{time.asctime()}]", *args, **kwargs)
 
 
 if __name__ == "__main__":
