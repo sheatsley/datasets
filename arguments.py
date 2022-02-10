@@ -6,6 +6,9 @@ Tue May 25 2021
 import argparse  # Parser for command-line options, arguments and sub-commands
 import pathlib  # Object-oriented filesystem paths
 
+# TODO
+# ensure lengths of certain arguments match (ie names & schemes & feature groups)
+
 
 def parse_args():
     """
@@ -21,7 +24,10 @@ def parse_args():
     )
 
     # mandatory arguments
-    p.add_argument("dataset", help="dataset to retrieve and process")
+    p.add_argument(
+        "dataset",
+        help="dataset to retrieve and process",
+    )
 
     # optional arguments
     p.add_argument(
@@ -29,7 +35,7 @@ def parse_args():
         "--feature",
         action="append",
         default=[],
-        help="column (or indicies) to transform",
+        help="features (or indicies) to transform ('all' selects all)",
         metavar="FEATURE",
         nargs="*",
     )
@@ -46,9 +52,13 @@ def parse_args():
         "--name",
         help="output file name",
         metavar="DATASET_NAME",
+        nargs="*",
     )
     p.add_argument(
-        "--outdir", default="out", help="output directory", type=pathlib.Path
+        "--outdir",
+        default="out",
+        help="output directory",
+        type=pathlib.Path,
     )
     p.add_argument(
         "-p",
@@ -84,8 +94,12 @@ def parse_args():
         help="increase verbosity",
     )
     p.add_argument(
-        "--version", action="version", help="displays module version", version="3.0"
+        "--version",
+        action="version",
+        help="displays module version",
+        version="3.0",
     )
+    breakpoint()
     return p.parse_args()
 
 
@@ -93,23 +107,24 @@ if __name__ == "__main__":
     """
     Example usage of MachineLearningDataSets via the command-line as:
 
-        $ mlds nslkdd -f protocol flag -f service --outdir datasets
-            -n nslkdd_mod -s standardscaler minmaxscaler -s onehotencoder
-            -l labelencoder -a --destupefy
+        $ mlds nslkdd -f duration count -f service --outdir datasets
+            -n nslkdd_ss nslkdd_mms -s standardscaler minmaxscaler
+            -s onehotencoder -l labelencoder -a --destupefy
 
-    This (1) downloads the NSL-KDD, (2) selects "protocol" & "flag" features as
-    one group and "service" as the second group, (3) specifies an alternative
-    output directory (instead of "out/"), (4) changes the base dataset name
-    when saved, (5) creates three copies of dataset: two where "protocol" &
-    "flag" (group one) are standaridized and the other where they are rescaled,
-    and a third copy where "service" (group two) is one-hot encoded, (6)
-    encodes labels as integers for all three dataset copies, and (7) computes
-    basic analytics and applies destupification (to both dataset copies).
+    This (1) downloads the NSL-KDD, (2) selects "duration" and "count" as one
+    group and "service" as the second group, (3) specifies an alternative
+    output directory (instead of "out/"), (4) changes the base dataset name (to
+    "nslkdd_mod") when saved, (5) creates two copies of the dataset: one where
+    "duration" & "count" (subgroup one) are standaridized and another where
+    they are rescaled, and, in both copies, "service" (group two) is one-hot
+    encoded, (6) encodes labels as integers for both dataset copies, and (7)
+    computes basic analytics, and (8) applies destupification (to both dataset
+    copies).
     """
     import sys  # System-specific parameters and functions
 
-    sys.argv = "args.py nslkdd -f protocol flag -f service --outdir datasets\
-            -n nslkdd_mod -s standardscaler minmaxscaler -s onehotencoder\
-            -l labelencoder -a --destupefy".split()
+    sys.argv = "args.py nslkdd -f duration count -f service --outdir datasets\
+                -n nslkdd_ss nslkdd_mms -s standardscaler minmaxscaler\
+                -s onehotencoder -l labelencoder -a --destupefy".split()
     print(parse_args())
     raise SystemExit(0)
