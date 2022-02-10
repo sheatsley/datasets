@@ -4,6 +4,7 @@ repositories.
 Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
+import adapters  # Third-party datasets
 import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
 import requests  # HTTP for Humans
@@ -16,11 +17,12 @@ class BaseAdapter:
     """
     This BaseAdapter class defines an interface to retrieve, open, and process
     arbitrary datasets from web resources. It is designed to work with the
-    Dataset class below. Dataset objects expect a single interface: a read
-    function which returns the dataset (as a pandas dataframe). If available,
-    Dataset objects will look for a name_map key to allow accesing features by
-    name (as well as index). Thus, this BaseAdapter class defines the essential
-    preprocesing operations to be readily consumable by Dataset objects.
+    Downloader class below. Downloader objects expect a single interface: a
+    read function which returns the dataset (as a pandas dataframe). If
+    available, Downloader objects will use column headers to allow accesing
+    features by name (as well as index). Thus, this BaseAdapter class defines
+    the essential preprocesing operations to be readily consumable by
+    Downloader objects.
 
     :func:`__init__`: instantiates BaseAdapter objects
     :func:`download`: retrieves datasets via HTTP through the requests module
@@ -37,41 +39,38 @@ class BaseAdapter:
         :type directory: string
         :param force_download: redownload the data, even if it exists
         :type force_download: boolean
-        :return: dataset template
-        :rtype: DatasetTemplate object
+        :return: example adapter
+        :rtype: BaseAdapter object
         """
-        self.urls = ("https://httpbin.org/get",)
+        self.url = "https://httpbin.org/get"
         self.directory = directory
         self.force_download = force_download
         return None
 
-    def download(self):
+    def download(self, url):
         """
         This method uses the requests module to retrieve datasets from web
         resources. Designed to facilitate a simple and robust interface,
         subclasses need only specify the relevant URL to download the dataset.
 
-        :param url: location of dataset
-        :type url: list of strings
+        :param url: location of a dataset file
+        :type url: string
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: the dataset (as partitions)
-        :rtype: list of bytes
+        :return: the current dataset file
+        :rtype: bytes
         """
 
         # create destination folder & download dataset (if necessary)
         path = pathlib.Path(self.directory, type(self).__name__.lower())
         path.mkdir(parents=True, exist_ok=True)
-        partitions = []
-        for url in self.urls:
-            data = path / url.split("/")[-1]
-            if not data.is_file() or self.force_download:
-                print(f"Downloading {url} to {self.directory}...")
-                req = requests.get(url)
-                req.raise_for_status()
-                data.write_bytes(req.content)
-            partitions.append(data.read_bytes())
-        return partitions
+        data = path / url.split("/")[-1]
+        if not data.is_file() or self.force_download:
+            print(f"Downloading {url} to {self.directory}...")
+            req = requests.get(url)
+            req.raise_for_status()
+            data.write_bytes(req.content)
+        return data.read_bytes()
 
     def preprocess(self, data):
         """
@@ -82,47 +81,43 @@ class BaseAdapter:
         data is rarely "model-ready"; this function should make it so.
 
         :param data: the data to process
-        :type data: dataset-specific
+        :type data: bytes
         :return: santized data
-        :rtype: dataset-specific
+        :rtype: pandas dataframe
         """
-        return data
+        return pandas.read_json(data)
 
     def read(self):
         """
-        This method defines the exclusive interface expected by Dataset
+        This method defines the exclusive interface expected by Downloader
         objects. Thus, this method should download (if necessary), prepare, and
         return the dataset as a pandas dataframe. Importantly, the read data
-        msut conform to the following standard:
+        must conform to the following standard:
 
         (1) If the dataset is for supervised learning, labels must be pointed
         to via the 'labels' key (as done with TensorFlow datasets), in their
         respective data category (data must be pointed to by a 'data' key).
-        (2) Training, testing, and validation data categories must be pointed
+        (2a) Training, testing, and validation data categories must be pointed
         to via "train", "test", and "validation" keys, respectively.
-        (3) If all dataset categories are disjoint in nature or if there is
-        only a single source of data, then the key names can be arbitrary (when
-        saved, the dataset names will be defined by the key names).
-        (4) All data should be returned as a pandas dataframe.
+        (2b) If all dataset categories are disjoint in nature or if there is
+        only a single source of data, then the key names can be arbitrary.
+        (3) All data should be returned as a pandas dataframe.
 
         :return: the downloaded datasets
         :rtype: dictionary; keys are the dataset types & values are dataframes
         """
-        return {
-            url.split("/")[-1]: pandas.read_json(data)
-            for url, data in zip(self.urls, self.preprocess(self.download))
-        }
+        return {"httpbin": self.preprocess(self.download(self.url))}
 
 
 class Downloader:
     """
-    This downloader class serves as a wrapper for popular
-    machine learning libraries to retrieve datasets. Moreover,
-    it is designed to be easily extendable to support downloading
-    datasets from ostensibly any location via the Requests module.
+    This Downloader class serves as a wrapper for popular machine learning
+    libraries to retrieve datasets. Moreover, it is designed to be easily
+    extendable to support downloading datasets from ostensibly any location via
+    subclassing BaseAdapter.
 
     :func:`__init__`: instantiates Downloader objects
-    :func:`custom`: defines an interface for custom dataset downloaders
+    :func:`adapter`: defines an interface for third-party dataset downloaders
     :func:`pytorch`: retrieve datasets from torchvision
     :func:`tensorflow`: retreive datasets from tensorflow
     """
@@ -133,16 +128,18 @@ class Downloader:
         TensorFlow, and user-specified datasets as described in the custom.py
         module. Details pertaining to the libraries are described below.
 
-        -- Custom --
-        The Custom class defines an interface for which the Downloader class
-        can consume and use to retrieve the desired dataset. As the interfaces
-        to retrieve these datasets can be entirely abitrary, it is on the user
-        to write templates that can properly process the dataset. As the
-        custom.py module describes, the only components that need to be
-        well-defined are (1) the URL to retrieve the dataset, (2) methods to
-        read the dataset, and (3) any preprocessing directives such that it can
-        be prepared into a pandas dataframe. The supported datasets are
-        described in custom.py.
+        -- Adapters --
+        The BaseAdapter class defines an interface this class can consume and
+        use to retrieve the desired dataset. As the interfaces to retrieve
+        these datasets can be entirely abitrary, it is on the user to write
+        templates that can properly process the dataset. As the BaseAdapter
+        class describes, the only components that need to be well-defined are
+        (1) the URL to retrieve the dataset, (2) methods to read the dataset,
+        and (3) any preprocessing directives such that it can be prepared into
+        a pandas dataframe. The supported datasets are:
+
+        Network Intrusion Detection
+        - NSL-KDD
 
         -- PyTorch --
         The datasets in PyTorch have non-standardized interfaces. Thus,
@@ -225,16 +222,14 @@ class Downloader:
 
         :param datasets: dataset to download
         :type datasets: string
-        :return: downloader
+        :return: dataset retriever
         :rtype: Downloader object
         """
         self.dataset = dataset
 
-        # define supported custom datasets
-        self.custom_datasets = {
-            name.lower(): dataset
-            for name in dir(custom)
-            if (dataset := isinstance(getattr(custom, name), type))
+        # define adapter datasets
+        self.adapter_datasets = {
+            dset.__name__.lower(): dset for dset in adapters.available
         }
 
         # define supported pytorch datasets
@@ -577,21 +572,19 @@ class Downloader:
 
     def custom(self, dataset, directory="/tmp/"):
         """
-        This function consumes a template from custom.py to retrieve datasets
-        from arbitrary network resources. It relies on the request module for
-        retrieving the dataset. Specific details of the templates can be found
-        in the custom.py module.
+        This method instantiates objects from the adapters package to retrieve
+        datasets from arbitrary network resources. It relies on the request
+        module for retrieving the dataset. Specific details of the templates
+        can be found in BaseAdapter.
 
-        :param dataset: dataset defined in custom.py
-        :type dataset: dataset object inherited by DatasetTemplate
+        :param dataset: dataset defined in adapters package
+        :type dataset: BaseAdapter subclass
         :param directory: directory to download the datasets to
         :type directory: string
         :return: pandas dataframes representing the dataset
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
-        dataset = dataset(directory=directory)
-        dataset.download(dataset.urls, dataset.directory)
-        return dataset.read(dataset.directory)
+        return dataset(directory=directory).read()
 
     def download(self, dataset):
         """
@@ -609,8 +602,8 @@ class Downloader:
             )
         elif dataset in self.tensorflow_datasets:
             return self.tensorflow(dataset)
-        elif dataset in self.custom_datasets:
-            return self.custom(self.custom_datasets[dataset])
+        elif dataset in self.adapter_datasets:
+            return self.custom(self.adapter_datasets[dataset])
         else:
             raise KeyError(dataset, "not supported")
 
