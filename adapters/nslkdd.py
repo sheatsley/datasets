@@ -3,10 +3,8 @@ This module defines a custom adapter for downloading the NSL-KDD.
 Author: Ryan Sheatsley
 Wed Feb 9 2022
 """
-import collections  # Container datatypes
 import io  # Core tools for working with streams
 import pandas  # Python Data Analysis Library
-import pathlib  # Object-oriented filesystem paths
 import retrieve  # Wrappers for popular machine learning datasets
 from utilities import print  # Timestamped printing
 import zipfile  # Work with ZIP archives
@@ -22,9 +20,9 @@ class NSLKDD(retrieve.BaseAdapter):
 
     Moreover, it redefines the following interfaces:
 
-    :func:`__init__`: instantiates NSL_KDD objects
+    :func:`__init__`: instantiates NSLKDD objects
     :func:`preprocess`: resolves any dataset particulars
-    :func:`read`: reads the dataset into memory
+    :func:`read`: ensures the dataset conforms to the required standard
 
     Finally, since the NSL-KDD is avaiable as ARFF, feature names are extracted
     and made available for applying feature-specific transformations by name
@@ -57,9 +55,9 @@ class NSLKDD(retrieve.BaseAdapter):
         super().__init__(directory, force_download)
 
         # metadata to retrieve the dataset
-        self.urls = ("http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip",)
-        self.files = ("KDDTrain+.arff", "KDDTest+.arff")
-        self.categories = dict(zip(self.files, ("train", "test")))
+        self.url = "http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip"
+        self.files = ("KDDTrain+.txt", "KDDTest+.txt")
+        self.fnames = "KDDTest-21.arff"
 
         # label transformation scheme
         self.transform = {
@@ -68,8 +66,10 @@ class NSLKDD(retrieve.BaseAdapter):
                 (
                     (
                         "apache",
+                        "apache2",
                         "back",
                         "land",
+                        "mailbomb",
                         "neptune",
                         "pod",
                         "processtable",
@@ -87,7 +87,7 @@ class NSLKDD(retrieve.BaseAdapter):
                 (
                     (
                         "ftp_write",
-                        "guess_password",
+                        "guess_passwd",
                         "httptunnel",
                         "imap",
                         "named",
@@ -124,57 +124,64 @@ class NSLKDD(retrieve.BaseAdapter):
     def preprocess(self, data):
         """
         Conforming to the BaseAdapter guidelines, we: (1) unzip the desired
-        files for the NSL-KDD (ARFF), and (2) apply the desired transformations
+        files for the NSL-KDD,  and (2) apply the desired transformations
         (i.e., dropping the last "difficulty" column and applying the label
         transformation defined above to the second-to-last "attack" column).
 
-        :param data: the dataset (as partitions)
-        :type data: list of bytes
-        :return: santized data
-        :rtype: dataset-specific
+        :param data: the current dataset file
+        :type data: bytes
+        :return: santized data file
+        :rtype: pandas dataframe
         """
+        with zipfile.ZipFile(io.BytesIO(data)) as zipped:
 
-        # we 0-index because data is expected to be a list of partitions
-        with zipfile.ZipFile(io.BytesIO(data[0])) as zipped:
+            # extract feature names from any ARFF file first
+            print(f"Extracting feature names from {self.fnames}...")
+            with io.TextIOWrapper(zipped.open(self.fnames)) as datafile:
+                features = []
+                for line in datafile.readlines()[1:43]:
+                    features.append(line.split("'")[1])
+
             for file in self.files:
                 print(f"Processing {file}...")
-                with zipped.open(file) as dataset:
+                with io.TextIOWrapper(zipped.open(file)) as datafile:
 
-                    # unzip and read into dataframe
-                    df = pandas.read_csv(dataset, header=None)
-
-                    # drop the last column, apply label mapping and save
+                    # drop the last column and apply label mapping
+                    print("Loading & applying transformations...")
+                    df = pandas.read_csv(datafile, header=None)
                     df.drop(columns=df.columns[-1], inplace=True)
                     df.replace({df.columns[-1]: self.transform}, inplace=True)
-                    df.to_csv(
-                        pathlib.Path(self.directory, type(self).__name__, file),
-                        index=False,
-                    )
 
-        # return the zip so that it is saved to disk
-        return data
+                    # add feature names as the column header
+                    print("Setting feature names as column header...")
+                    df.columns = features
+                yield df
 
-    def read(self, directory="/tmp/"):
+    def read(self):
         """
-        The BaseAdapter specification requires that: (1) labels and data are
-        encoded as "labels" and "data", respectively, (2) the training and test
-        sets are encoded as "train", and "test", respectively, (3) if
-        available, feature names are exposed through a "name_map" key, and (4)
-        the data is returned as a pandas dataframe.
+        This method defines the exclusive interface expected by Dataset
+        objects. Thus, this method should download (if necessary), prepare, and
+        return the dataset as a pandas dataframe. Importantly, the read data
+        must conform to the following standard:
 
-        :return: the downloaded datasets as a pandas dataframe
+        (1) If the dataset is for supervised learning, labels must be pointed
+        to via the 'labels' key (as done with TensorFlow datasets), in their
+        respective data category (data must be pointed to by a 'data' key).
+        (2a) Training, testing, and validation data categories must be pointed
+        to via "train", "test", and "validation" keys, respectively.
+        (2b) If all dataset categories are disjoint in nature or if there is
+        only a single source of data, then the key names can be arbitrary.
+        (3) All data should be returned as a pandas dataframe.
+
+        :return: the downloaded datasets
         :rtype: dictionary; keys are the dataset types & values are dataframes
         """
-        dataset = {}
-        for file in self.files:
-
-            # read in the data, split labels, and return as a dictionary
-            df = pandas.read_csv(pathlib.Path(directory, type(self).__name__, file))
-            dataset[self.categories[file]] = {
-                "data": df.drop(columns=df.columns[-1]),
-                "labels": df.filter([df.columns[-1]]),
-            }
-        return dataset
+        return {
+            partition: {"data": df.drop(columns="class"), "labels": df["class"].copy()}
+            for partition, df in zip(
+                ("train", "test"), self.preprocess(self.download(self.url))
+            )
+        }
 
 
 if __name__ == "__main__":
@@ -187,5 +194,11 @@ if __name__ == "__main__":
 
                             python3 -m adapters.nslkdd
     """
-    NSLKDD().read()
+    dataset = NSLKDD().read()
+    print(
+        f'NSL-KDD has {len(dataset["train"]["data"])} training samples,',
+        f'{len(dataset["test"]["data"])} test samples, and',
+        f'{len(dataset["test"]["data"].columns)} features with',
+        f'{len(dataset["test"]["labels"].unique())} classes.',
+    )
     raise SystemExit(0)
