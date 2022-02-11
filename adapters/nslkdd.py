@@ -3,14 +3,13 @@ This module defines a custom adapter for downloading the NSL-KDD.
 Author: Ryan Sheatsley
 Wed Feb 9 2022
 """
+from adapters import baseadapter  # Base Adapter class for custom datasets
 import io  # Core tools for working with streams
 import pandas  # Python Data Analysis Library
-import retrieve  # Wrappers for popular machine learning datasets
-from utilities import print  # Timestamped printing
 import zipfile  # Work with ZIP archives
 
 
-class NSLKDD(retrieve.BaseAdapter):
+class NSLKDD(baseadapter.BaseAdapter):
     """
     This class adds support for downloading, preprocessing, and saving the
     NSL-KDD (https://www.unb.ca/cic/datasets/nsl.html). It inherits the following
@@ -188,9 +187,8 @@ if __name__ == "__main__":
     """
     Example usage of the NSLKDD class. It downloads the NSL-KDD (if it hasn't
     already) to /tmp, preprocesses the data, and returns the data as a pandas
-    dataframe. Importantly, this must be run from the root directory of the machine
-    learning datasets repo as a module (as the BaseAdapter definition is found
-    there). That is, if this file is ran directly, it must done so as:
+    dataframe. Importantly, to debug adapters, they must be run form the root
+    directory of the machine learning datasets repo as a module, such as:
 
                             python3 -m adapters.nslkdd
     """
