@@ -51,7 +51,7 @@ class Downloader:
         supported datasets are encoded as dictionaries of dictionaries, with
         the dataset names as keys and, as values, a dictionary containing two
         keys: "name", which maps the dataset name to the case-sensitive module
-        name; and, "split", which maps the the dataset "category" (e.g.,
+        name; and, "part", which maps the the dataset "category" (e.g.,
         training, testing, validation, landmarks, outlines, etc.) parameter and
         possible values as a tuple.
 
@@ -141,103 +141,103 @@ class Downloader:
         self.pytorch_datasets = {
             "caltech101": {
                 "name": "Caltech101",
-                "split": ("target_type", ["category", "annotation"]),
+                "part": ("target_type", ["category", "annotation"]),
             },
             "caltech256": {
                 "name": "Caltech256",
-                "split": None,
+                "part": None,
             },
             "celeba": {
                 "name": "CelebA",
-                "split": ("split", ["all"]),
+                "part": ("split", ["all"]),
             },
             "cifar10": {
                 "name": "CIFAR10",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "cifar100": {
                 "name": "CIFAR100",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "fakedata": {
                 "name": "FakeData",
-                "split": None,
+                "part": None,
             },
             "fashionmnist": {
                 "name": "FashionMNIST",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "imagenet": {
                 "name": "ImageNet",
-                "split": ("split", ["train", "val"]),
+                "part": ("split", ["train", "val"]),
             },
             "kitti": {
                 "name": "Kitti",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "kmnist": {
                 "name": "KMNIST",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "lsun": {
                 "name": "LSUN",
-                "split": ("classes", ["train", "val", "test"]),
+                "part": ("classes", ["train", "val", "test"]),
             },
             "mnist": {
                 "name": "MNIST",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "omniglot": {
                 "name": "Omniglot",
-                "split": ("background", [True, False]),
+                "part": ("background", [True, False]),
             },
             "phototour": {
                 "name": "PhotoTour",
-                "split": ("name", ["notredame", "yosemite", "liberty"]),
+                "part": ("name", ["notredame", "yosemite", "liberty"]),
             },
             "places365": {
                 "name": "Places365",
-                "split": ("split", ["train-standard", "train-challenge", "val"]),
+                "part": ("split", ["train-standard", "train-challenge", "val"]),
             },
             "qmnist": {
                 "name": "QMNIST",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "sbdtaset": {
                 "name": "SBDataset",
-                "split": ("image_set", ["train", "val"]),
+                "part": ("image_set", ["train", "val"]),
             },
             "sbu": {
                 "name": "SBU",
-                "split": None,
+                "part": None,
             },
             "semeion": {
                 "name": "SEMEION",
-                "split": None,
+                "part": None,
             },
             "stl10": {
                 "name": "STL10",
-                "split": ("split", ["train", "test"]),
+                "part": ("split", ["train", "test"]),
             },
             "svhn": {
                 "name": "SVHN",
-                "split": ("split", ["train", "test"]),
+                "part": ("split", ["train", "test"]),
             },
             "usps": {
                 "name": "USPS",
-                "split": ("train", [True, False]),
+                "part": ("train", [True, False]),
             },
             "vocsegmentation": {
                 "name": "VOCSegmentation",
-                "split": ("image_set", ["train", "val"]),
+                "part": ("image_set", ["train", "val"]),
             },
             "vocdetection": {
                 "name": "VOCDetection",
-                "split": ("image_set", ["train", "val"]),
+                "part": ("image_set", ["train", "val"]),
             },
             "widerface": {
                 "name": "WIDERFace",
-                "split": ("split", ["train", "val", "test"]),
+                "part": ("split", ["train", "val", "test"]),
             },
         }
 
@@ -470,9 +470,6 @@ class Downloader:
             "starcraft_video",
             "ucf101",
         }
-
-        # define pytorch dataset category mappings
-        self.pytorch_map = {True: "train", False: "test"}
         return None
 
     def custom(self, dataset, directory="/tmp/"):
@@ -503,7 +500,7 @@ class Downloader:
         if dataset in self.pytorch_datasets:
             return self.pytorch(
                 self.pytorch_datasets[dataset]["name"],
-                *self.pytorch_datasets[dataset]["split"],
+                *self.pytorch_datasets[dataset]["part"],
             )
         elif dataset in self.tensorflow_datasets:
             return self.tensorflow(dataset)
@@ -512,7 +509,7 @@ class Downloader:
         else:
             raise KeyError(dataset, "not supported")
 
-    def pytorch(self, dataset, arg, splits, directory="/tmp/"):
+    def pytorch(self, dataset, arg, parts, directory="/tmp/"):
         """
         This function serves as a wrapper for torchvision.datasets
         (https://pytorch.org/vision/stable/datasets.html). While this API is
@@ -524,27 +521,39 @@ class Downloader:
 
         :param dataset: a dataset from torchvision.datasets
         :type dataset: string
-        :param arg: the name of the argument governing the dataset splits
+        :param arg: the name of the argument governing the dataset partitions
         :type arg: string
-        :param splits: list of dataset "categories" to download
-        :type splits: list or NoneType
+        :param parts: list of dataset "categories" to download
+        :type parts: list or NoneType
         :param directory: directory to download the datasets to
         :type directory: string
         :return: pandas dataframes representing the dataset
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
-        return {
-            # map splits to strings so that they are human-readable
-            self.pytorch_map.get(split, split): getattr(torchvision.datasets, dataset)(
+
+        # download, store the original shape, and flatten
+        tvds = {
+            part: getattr(torchvision.datasets, dataset)(
                 # use keyword arguments since interfaces can differ slightly
                 **{
                     "root": directory,
                     "download": True,
                     "transform": torchvision.transforms.ToTensor(),
-                    arg: split,
+                    arg: part,
                 }
             )
-            for split in splits
+            for part in parts
+        }
+        oshape = {part: tvds[part].data.numpy().shape for part in parts}
+        return {
+            part: {
+                "data": pandas.DataFrame(
+                    dataset[part].data.numpy().reshape(oshape[part][0], -1)
+                ),
+                "labels": pandas.DataFrame(dataset[part].targets.numpy()),
+                "oshape": oshape[part],
+            }
+            for part in parts
         }
 
     def tensorflow(self, dataset, directory="/tmp/"):
@@ -563,7 +572,7 @@ class Downloader:
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
 
-        # download, flatten, and store the original shape
+        # download, store the original shape, and flatten
         tfds = tensorflow_datasets.load(dataset, data_dir=directory, batch_size=-1)
         oshape = {part: tfds[part]["image"].numpy().shape for part in ("train", "test")}
         return {
