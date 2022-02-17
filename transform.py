@@ -7,8 +7,7 @@ from utilities import print  # Timestamped printing
 
 # TODO
 # add print statements
-# destupify should cleanse for unknown values
-# create FunctionTransformer to remove NaNs, NULLs, etc.
+# destupify should cleanse for unknown values: min(drop_samples, drop_columns)
 
 
 class Transformer:
@@ -21,116 +20,67 @@ class Transformer:
     originally presented in.
 
     :func:`__init__`: instantiates Transformer objects
-    :func:`transform`: applies transformation schemes to the data
+    :func:`apply`: applies transformation schemes to the data
+    :func:`export`: correctly concatenates transformations to the original data
+    :func:`destupify`: automagic data cleaning (experimental)
+    :func:`labelencoder`: encode target labels between 0 and n_classses-1
+    :func:`minmaxscaler`: scale features to a given range
+    :func:`onehotencoder`: encode categorical features as one-hot arrays
+    :func:`robustscaler`: scale features with statistics robust to outliers
+    :func:`standardscaler`: standardize features to zero mean and unit variance
     """
 
-    def __init__(self, schemes, features):
+    def __init__(self, features, schemes):
         """
         This function initializes Transformer objects with the necessary
-        information to apply arbitrary transformations to data.
+        information to apply arbitrary transformations to data. Specifically,
+        the manipulated features are expected to be list of tuples, wherein the
+        number of datasets is the product of the lengths of the tuples. This
+        enables, for example, creation of multiple datasets with different
+        feature transformation schemes (described by the first tuple), all with
+        label encoding (described by the second tuple). Consequently, the
+        transformations applied to the features within each tuple is described
+        by schemes, which is expected to be list of length equal to the number
+        of tuples (in features) containing Transformer method callables.
 
-        :param datasets: datasets to apply transformations to
-        :type datasets: dictionary pointing to pandas dataframes
+        :param features: the features to manipulate
+        :type features: list of tuples containing indicies
         :param schemes: transformations to apply to the data
-        :type schemes: list of strings
-        :param features: features to apply the transformations to
-        :type features: list of integers (indicies) or strings (names)
+        :type schemes: list of Transformer callables
+        :return: a prepped transformer
+        :rtype: Transformer object
         """
+        self.transformations = []
+        self.features = features
+        self.schemes = schemes
         return None
 
-    def download(self, datasets):
+    def apply(self, train, test=None):
         """
-        This function dispatches dataset downloads to the respective handlers.
+        This method applies sckilit-learn data transformations, while
+        preserving the original layout of the data. Importantly, this method
+        applies the transformations and stores them internally. Once the export
+        method is called, the transformations are retrieved, concatenated into
+        their original indicies, and returned (and thus, this method returns
+        nothing).
 
-        :param datasets: datasets to download
-        :type datasets: list of strings
-        :return: the downloaded datasets
-        :rtype: dictionary of datasets containing dictionaries of categories
+        :param train: the dataset to transform
+        :type train: pandas dataframe
+        :param test: the test set to transform (if applicable)
+        :type test: pandas dataframe
+        :return: None
+        :rtype: NoneType
         """
-        downloads = {}
-        for dataset in datasets:
-            if dataset in self.pytorch_datasets:
-                downloads[dataset] = self.pytorch(
-                    self.pytorch_datasets[dataset]["name"],
-                    *self.pytorch_datasets[dataset]["split"]
-                )
-            elif dataset in self.tensorflow_datasets:
-                downloads[dataset] = self.tensorflow(dataset)
-            elif dataset in self.custom_datasets:
-                pass
-            else:
-                raise KeyError(dataset, "not supported")
-        return downloads
+        for scheme, feature in zip(self.schemes, self.features):
 
-    def pytorch(self, dataset, arg, splits, directory="/tmp/"):
-        """
-        This function serves as a wrapper for torchvision.datasets
-        (https://pytorch.org/vision/stable/datasets.html). While this API is
-        designed to be as standardized as possible, many of the datasets
-        implement their own custom API (since the parameters and the values
-        they can take are defined by the dataset authors). Specifically, this
-        function: (1) downloads the entire dataset, (2) saves it in /tmp/, (3)
-        returns the dataset as a numpy array.
-
-        :param dataset: a dataset from torchvision.datasets
-        :type dataset: string
-        :param arg: the name of the argument governing the dataset splits
-        :type arg: string
-        :param splits: list of dataset "categories" to download
-        :type splits: list or NoneType
-        :param directory: directory to download the datasets to
-        :type directory: string
-        :return: numpy versions of the dataset
-        :rtype: dictionary; keys are dataset types & values are numpy arrays
-        """
-        return {
-            # map splits to strings so that they are human-readable
-            self.pytorch_map.get(split, split): getattr(torchvision.datasets, dataset)(
-                # use keyword arguments since interfaces can differ slightly
-                **{
-                    "root": directory,
-                    "download": True,
-                    "transform": torchvision.transforms.ToTensor(),
-                    arg: split,
-                }
+            # fit to training, transform to train & test
+            print(f"Applying {scheme} to features {feature}...")
+            self.tranformations.append(
+                (s(train[feature], test[feature] if test else None) for s in scheme)
             )
-            for split in splits
-        }
-
-    def tensorflow(self, dataset, directory="/tmp/"):
-        """
-        This function serves as a wrapper for tensorflow_datasets.
-        (https://www.tensorflow.org/datasets). The interfaces for the vast
-        majority of datasets are identical, and thus, this wrapper largely
-        prepares the data such that it conforms to the standard used throughout
-        the rest of this repository.
-
-        :param dataset: a dataset from tensorflow_datasets
-        :type dataset: string
-        :param directory: directory to download the datasets to
-        :type directory: string
-        :return: numpy versions of the dataset
-        :rtype: dictionary; keys are dataset types & values are numpy arrays
-        """
-        return tensorflow_datasets.as_numpy(
-            tensorflow_datasets.load(dataset, data_dir=directory, batch_size=-1)
-        )
+        return
 
 
 if __name__ == "__main__":
-    """
-    Example usage of MachineLearningDataSets via the command-line as:
-
-        $ mlds mnist nslkdd -i 50-700 -i protocol flag --outdir datasets
-            -n mnist_mod nslkdd_mod -s normalization -s standardization minmax
-            -a --destupefy
-
-    This (1) downloads MNIST and NSL-KDD, (2) selects all features for MNIST
-    (necessary to correctly associate the following "-i" with NSL-KDD) and
-    "protocol" & "flag" for NSL-KDD, (3) specifies an alternative output
-    directory (instead of "out/"), (4) changes the base dataset name when
-    saved, (5) applies minmax scaling to MNIST and creates two copies of the
-    NSL-KDD that are standardization & normalized, respectively, and (6)
-    computes basic analytics and applies destupification (to both datasets).
-    """
+    """ """
     raise SystemExit(0)
