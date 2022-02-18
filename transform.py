@@ -3,6 +3,7 @@ The transform module applies transformations to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Feb 15 2022
 """
+import itertools  # Functions creating iterators for efficient looping¶
 from utilities import print  # Timestamped printing
 
 # TODO
@@ -34,23 +35,24 @@ class Transformer:
         """
         This function initializes Transformer objects with the necessary
         information to apply arbitrary transformations to data. Specifically,
-        the manipulated features are expected to be list of tuples, wherein the
+        the manipulated features are expected to be tuple of tuples, wherein the
         number of datasets is the product of the lengths of the tuples. This
         enables, for example, creation of multiple datasets with different
         feature transformation schemes (described by the first tuple), all with
         label encoding (described by the second tuple). Consequently, the
         transformations applied to the features within each tuple is described
-        by schemes, which is expected to be list of length equal to the number
+        by schemes, which is expected to be tuple of length equal to the number
         of tuples (in features) containing Transformer method callables.
 
         :param features: the features to manipulate
-        :type features: list of tuples containing indicies
+        :type features: tuple of tuples containing indicies
         :param schemes: transformations to apply to the data
-        :type schemes: list of Transformer callables
+        :type schemes: tuple of tuples of Transformer callables
         :return: a prepped transformer
         :rtype: Transformer object
         """
         self.transformations = []
+        self.original = None
         self.features = features
         self.schemes = schemes
         return None
@@ -78,6 +80,35 @@ class Transformer:
             self.tranformations.append(
                 (s(train[feature], test[feature] if test else None) for s in scheme)
             )
+
+        # save the original dataframe
+        self.original = (train, test if test else None)
+        return None
+
+    def export(self, feature_names=None):
+        """
+        This method properly assembles datasets based on the applied
+        transformations. Specifically, it concatenates transformations to
+        preserve their original orders and produces n copies of the dataset,
+        where n is the product of the length of the tuples in
+        self.transformations. It takes no arguments so that the building
+        operation (which will memory-intensive) can be called when it is most
+        appropriate (other than feature_names, which can optionally set the column
+        headers, of which a subset are modified if one-hot encoding was used).
+
+        :param feature_names: names of the features
+        :type feature_names: tuple of strings
+        :return: the transformed datasets
+        :rtype: generator of pandas dataframes
+        """
+        for features, schemes, transformed in zip(
+            self.features,
+            itertools.product(*self.schemes),
+            itertools.product(*self.transformations),
+        ):
+            # assemble the dataframe based on the original indicies
+            print(f"Exporting {'×'.join(*schemes)}...")
+            yield self.original[0].assign()
         return
 
 
