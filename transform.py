@@ -8,7 +8,6 @@ import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
 # TODO
-# add print statements
 # destupify should cleanse for unknown values: min(drop_samples, drop_columns)
 
 
@@ -28,6 +27,7 @@ class Transformer:
     :func:`labelencoder`: encode target labels between 0 and n_classses-1
     :func:`minmaxscaler`: scale features to a given range
     :func:`onehotencoder`: encode categorical features as one-hot arrays
+    :func:`raw`: no-op (return data unchanged)
     :func:`robustscaler`: scale features with statistics robust to outliers
     :func:`standardscaler`: standardize features to zero mean and unit variance
     """
@@ -235,6 +235,13 @@ class Transformer:
         self.ohe_f += encoder.categories_
         print(f"Encoding complete. Expanded shape: {train.shape}")
         return train, encoder.transform(test) if test else None
+
+    def raw(self, train, test=None):
+        """
+        This method serves as a transformation no-op; the data is returned
+        as-is.
+        """
+        return train, test
 
     def robustscaler(self, train, test=None):
         """
