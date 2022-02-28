@@ -4,10 +4,10 @@ Author: Ryan Sheatsley
 Tue May 25 2021
 """
 import argparse  # Parser for command-line options, arguments and sub-commands
+import itertools  # Functions creating iterators for efficient looping¶
+import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
-
-# TODO
-# ensure lengths of certain arguments match (ie names & schemes & feature groups)
+import transform  # Order-preserving transformations for machine learning data
 
 
 def parse_args():
@@ -99,8 +99,43 @@ def parse_args():
         help="displays module version",
         version="3.0",
     )
-    breakpoint()
     return p.parse_args()
+
+
+def validate_args():
+    """
+    This function executes a series of assertions and prints debug information
+    to confirm proper behavior of the MachineLearningDataSets API.
+
+    :return: command-line arguments
+    :rtype: ArgumentParser
+    """
+
+    # extract command-line args, correct dataset names, & run assertions
+    args = parse_args()
+    args.name = (
+        args.name
+        if args.name
+        else [
+            "_".join([args.dataset] + list(s)) for s in itertools.product(*args.scheme)
+        ]
+    )
+
+    # schemes, features, and names must be the same length
+    assert len(args.schemes) == len(args.features) == len(args.names), (
+        "Schemes, features, and names are not equal length!"
+        + f"{args.schemes, args.features, args.names}"
+    )
+
+    # precision must be a valid numpy data type
+    assert getattr(np, args.precision)
+
+    # schemes must be valid Transformer methods
+    assert all(
+        hasattr(transform.Transformer, s) for scheme in args.scheme for s in scheme
+    )
+
+    return args
 
 
 if __name__ == "__main__":
@@ -126,5 +161,5 @@ if __name__ == "__main__":
     sys.argv = "args.py nslkdd -f duration count -f service --outdir datasets\
                 -n nslkdd_ss nslkdd_mms -s standardscaler minmaxscaler\
                 -s onehotencoder -l labelencoder -a --destupefy".split()
-    print(parse_args())
+    print(validate_args())
     raise SystemExit(0)
