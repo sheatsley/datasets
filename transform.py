@@ -4,6 +4,7 @@ Author: Ryan Sheatsley
 Tue Feb 15 2022
 """
 import itertools  # Functions creating iterators for efficient looping¶
+import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
 # TODO
@@ -51,10 +52,11 @@ class Transformer:
         :return: a prepped transformer
         :rtype: Transformer object
         """
-        self.transformations = []
-        self.original = None
         self.features = features
         self.schemes = schemes
+        self.transformations = []
+        self.ohe_f = []
+        self.original = None
         return None
 
     def apply(self, train, test=None):
@@ -81,8 +83,10 @@ class Transformer:
                 (s(train[feature], test[feature] if test else None) for s in scheme)
             )
 
-        # save the original dataframe
-        self.original = (train, test if test else None)
+        # save the original dataframe (temporarily convert column headers to strings)
+        train.set_axis(train.columns.astype(str), axis=1, inplace=True)
+        test.set_axis(test.columns.astype(str), axis=1, inplace=True) if test else None
+        self.original = {"train": train, "test": None}
         return None
 
     def export(self, feature_names=None):
@@ -92,24 +96,178 @@ class Transformer:
         preserve their original orders and produces n copies of the dataset,
         where n is the product of the length of the tuples in
         self.transformations. It takes no arguments so that the building
-        operation (which will memory-intensive) can be called when it is most
-        appropriate (other than feature_names, which can optionally set the column
-        headers, of which a subset are modified if one-hot encoding was used).
+        operation (which will be memory-intensive) can be called when it is
+        most appropriate (other than feature_names, which can optionally set
+        the column headers, of which a subset are modified if one-hot encoding
+        was used).
 
         :param feature_names: names of the features
         :type feature_names: tuple of strings
         :return: the transformed datasets
         :rtype: generator of pandas dataframes
         """
-        for features, schemes, transformed in zip(
-            self.features,
+        for features, schemes, (train_transform, test_transform) in zip(
+            itertools.repeat(self.features),
             itertools.product(*self.schemes),
             itertools.product(*self.transformations),
         ):
             # assemble the dataframe based on the original indicies
             print(f"Exporting {'×'.join(*schemes)}...")
-            yield self.original[0].assign()
-        return
+            training = self.original["train"].assign(
+                **{
+                    str(f): t[idx]
+                    for idx, (f_tup, t) in enumerate(zip(features, train_transform))
+                    for f in f_tup
+                }
+            )
+            testing = (
+                self.original["test"].assign(
+                    **{
+                        str(f): t[idx]
+                        for idx, (f_tup, t) in enumerate(zip(features, test_transform))
+                        for f in f_tup
+                    }
+                )
+                if test_transform
+                else None
+            )
+
+            # set feature_names (and correct for one-hot encodings)
+            if feature_names:
+                try:
+                    ohotf = features[schemes.index("onehotencoder")]
+                    for idx, ohf in enumerate(ohotf):
+
+                        # this is a dynamically changing list; offset each iteration
+                        ohf += sum((len(self.ohe_f[i]) - 1 for i in range(idx)))
+                        print(f"Expanding {feature_names[ohf]} to {self.ohe_f[idx]}...")
+                        feature_names[ohf : ohf + 1] = self.ohe_f[idx]
+                except ValueError:
+                    pass
+                training.set_axis(feature_names, axis=1, inplace=True)
+                testing.set_axis(
+                    feature_names, axis=1, inplace=True
+                ) if testing else None
+
+            # print final shape as a sanity check and yield
+            print(
+                f"{'×'.join(*schemes)} export complete! Final shape(s):",
+                training.shape,
+                testing.shape if testing else "",
+            )
+            yield (training, testing) if testing else training
+
+    def destupify(self, data):
+        """
+        This method attempts to clean datasets after they have been processed.
+        At this time, destupify performs the following:
+
+            - Removes any single-value columns
+            - Removes any identical rows
+
+        Note, this method is experimental.
+
+        :param dataset: the dataset to cleanse
+        :type dataset: pandas dataframe
+        :return: the cleaned datasets
+        :rtype: pandas dataframe
+        """
+        print("Analyzing dataset for single-value columns...")
+        org_s, org_f = data.shape
+        data = data[data.columns[data.nunique() > 1]]
+        print(f"Dropped {data.shape[1]-org_f} features! Removing duplicate samples...")
+        data = data.drop_duplicates()
+        print(f"Dropped {data.shape[0]-org_s} samples! (New shape: {data.shape})")
+        return data
+
+    def labelencoder(self, train_labels, test_labels=None):
+        """
+        This method serves as a simple wrapper for scikit-learn's LabelEncoder.
+        Notably, we expect both training and testing labels as input (as any
+        deficient test set that lacks samples from a given class will still be
+        processed correctly).
+
+        :param train_labels: the training labels to transform
+        :type train_labels: pandas series
+        :param test_labels: the testing labels to transform
+        :type test_labels: pandas series
+        :return: integer-encoded labels
+        :rtype: tuple of pandas series
+        """
+        encoder = sklearn.preprocessing.LabelEncoder()
+        train_labels = encoder.fit_transform(train_labels)
+        print(f"Transformed {len(encoder.classes_)} classes.")
+        return train_labels, encoder.transform(test_labels) if test_labels else None
+
+    def minmaxscaler(self, train, test=None):
+        """
+        This method serves as a simple wrapper for scikit-learn's MinMaxScaler.
+
+        :param train: the training data to tranform
+        :type train: pandas dataframe
+        :param test: the testing data to transform
+        :type test: pandas dataframe
+        :return: transformed data
+        :rtype: tuple of pandas series
+        """
+        print(f"Applying min-max scaling to data of shape {train.shape}...")
+        scaler = sklearn.preprocessing.MinMaxScaler()
+        train = scaler.fit_transform(train)
+        return train, scaler.transform(test) if test else None
+
+    def onehotencoder(self, train, test=None):
+        """
+        This method serves as a simple wrapper for scikit-learn's
+        OneHotEncoder. Importantly, the categories_ attribute is saved on each
+        call to this method to facilitate correct feature labels when
+        feature_names is passed into the export method.
+
+        :param train: the training data to tranform
+        :type train: pandas dataframe
+        :param test: the testing data to transform
+        :type test: pandas dataframe
+        :return: transformed data
+        :rtype: tuple of pandas dataframes
+        """
+        print(f"Applying one-hot encoding to data of shape {train.shape}...")
+        encoder = sklearn.preprocessing.OneHotEncoder()
+        train = encoder.fit_transform(train)
+        self.ohe_f += encoder.categories_
+        print(f"Encoding complete. Expanded shape: {train.shape}")
+        return train, encoder.transform(test) if test else None
+
+    def robustscaler(self, train, test=None):
+        """
+        This method serves as a simple wrapper for scikit-learn's RobustScaler.
+
+        :param train: the training data to tranform
+        :type train: pandas dataframe
+        :param test: the testing data to transform
+        :type test: pandas dataframe
+        :return: transformed data
+        :rtype: tuple of pandas dataframes
+        """
+        print(f"Applying robust scaling to data of shape {train.shape}...")
+        scaler = sklearn.preprocessing.RobustScaler()
+        train = scaler.fit_transform(train)
+        return train, scaler.transform(test) if test else None
+
+    def standardscaler(self, train, test=None):
+        """
+        This method serves as a simple wrapper for scikit-learn's
+        StandardScaler.
+
+        :param train: the training data to tranform
+        :type train: pandas dataframe
+        :param test: the testing data to transform
+        :type test: pandas dataframe
+        :return: transformed data
+        :rtype: tuple of pandas dataframes
+        """
+        print(f"Applying standard scaling to data of shape {train.shape}...")
+        scaler = sklearn.preprocessing.RobustScaler()
+        train = scaler.fit_transform(train)
+        return train, scaler.transform(test) if test else None
 
 
 if __name__ == "__main__":
