@@ -130,9 +130,11 @@ def validate_args():
     # precision must be a valid numpy data type
     assert getattr(np, args.precision)
 
-    # schemes must be valid Transformer methods
+    # schemes & labels must be valid Transformer methods
     assert all(
-        hasattr(transform.Transformer, s) for scheme in args.scheme for s in scheme
+        hasattr(transform.Transformer, t)
+        for tform in args.scheme + args.label
+        for t in tform
     )
 
     # print parsed arguments as a sanity check
