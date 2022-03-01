@@ -16,7 +16,7 @@ def parse_args():
     for the datasets module.
 
     :return: command-line arguments
-    :rtype: ArgumentParser
+    :rtype: argparse.Namesapce
     """
     p = argparse.ArgumentParser(
         description="Retrieves and processes popular machine learning datasets.",
@@ -32,7 +32,7 @@ def parse_args():
     # optional arguments
     p.add_argument(
         "-f",
-        "--feature",
+        "--features",
         action="append",
         default=[],
         help="transformable features (or indicies) ('all' uses all)",
@@ -41,7 +41,7 @@ def parse_args():
     )
     p.add_argument(
         "-l",
-        "--label",
+        "--labels",
         action="append",
         default=[],
         help="label manipulation scheme(s) to apply",
@@ -49,7 +49,7 @@ def parse_args():
     )
     p.add_argument(
         "-n",
-        "--name",
+        "--names",
         help="output file name",
         metavar="DATASET_NAME",
         nargs="*",
@@ -68,7 +68,7 @@ def parse_args():
     )
     p.add_argument(
         "-s",
-        "--scheme",
+        "--schemes",
         action="append",
         default=[],
         help="feature manipulation scheme(s) to apply",
@@ -108,38 +108,38 @@ def validate_args():
     to confirm proper behavior of the MachineLearningDataSets API.
 
     :return: command-line arguments
-    :rtype: ArgumentParser
+    :rtype: dictionary; keys are arguments and values are entries
     """
 
     # extract command-line args, correct dataset names, & run assertions
     args = parse_args()
-    args.name = (
-        args.name
-        if args.name
+    args.names = (
+        args.names
+        if args.names
         else [
-            "_".join([args.dataset] + list(s)) for s in itertools.product(*args.scheme)
+            "_".join([args.dataset] + list(s)) for s in itertools.product(*args.schemes)
         ]
     )
 
     # schemes, features, and names must be the same length
-    assert len(args.scheme) == len(args.feature) == len(args.name), (
+    assert len(args.schemes) == len(args.features) == len(args.names), (
         "Schemes, features, and names are not equal length!"
-        + f"{args.scheme, args.feature, args.name}"
+        + f"{args.schemes, args.features, args.names}"
     )
 
     # precision must be a valid numpy data type
-    assert getattr(np, args.precision)
+    assert hasattr(np, args.precision)
 
     # schemes & labels must be valid Transformer methods
     assert all(
         hasattr(transform.Transformer, t)
-        for tform in args.scheme + args.label
+        for tform in args.schemes + args.labels
         for t in tform
     )
 
     # print parsed arguments as a sanity check
     print("Arguments:", *(f"{a}={v}" for a, v in vars(args).items()))
-    return args
+    return vars(args)
 
 
 if __name__ == "__main__":
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     "duration" & "count" (subgroup one) are standaridized and another where
     they are rescaled, and, in both copies, "service" (group two) is one-hot
     encoded, (6) encodes labels as integers for both dataset copies, and (7)
-    computes basic analytics, and (8) applies destupification (to both dataset
+    computes basic analytics, and (8) applies destupefication (to both dataset
     copies).
     """
     import sys  # System-specific parameters and functions
