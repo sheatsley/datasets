@@ -8,7 +8,7 @@ import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
 # TODO
-# destupify should cleanse for unknown values: min(drop_samples, drop_columns)
+# destupefy should cleanse for unknown values: min(drop_samples, drop_columns)
 
 
 class Transformer:
@@ -23,7 +23,7 @@ class Transformer:
     :func:`__init__`: instantiates Transformer objects
     :func:`apply`: applies transformation schemes to the data
     :func:`export`: correctly concatenates transformations to the original data
-    :func:`destupify`: automagic data cleaning (experimental)
+    :func:`destupefy`: automagic data cleaning (experimental)
     :func:`labelencoder`: encode target labels between 0 and n_classses-1
     :func:`minmaxscaler`: scale features to a given range
     :func:`onehotencoder`: encode categorical features as one-hot arrays
@@ -32,7 +32,7 @@ class Transformer:
     :func:`standardscaler`: standardize features to zero mean and unit variance
     """
 
-    def __init__(self, features, schemes):
+    def __init__(self, features, labels, schemes):
         """
         This function initializes Transformer objects with the necessary
         information to apply arbitrary transformations to data. Specifically,
@@ -47,6 +47,8 @@ class Transformer:
 
         :param features: the features to manipulate
         :type features: tuple of tuples containing indicies
+        :param labels: transfomrations to apply to the labels
+        :type labels: tuple of tuples of Transformer callables
         :param schemes: transformations to apply to the data
         :type schemes: tuple of tuples of Transformer callables
         :return: a prepped transformer
@@ -54,12 +56,14 @@ class Transformer:
         """
         self.features = features
         self.schemes = schemes
-        self.transformations = []
+        self.data_transforms = []
         self.ohe_f = []
+        self.labels = labels
+        self.label_transforms = []
         self.original = None
         return None
 
-    def apply(self, train, test=None):
+    def apply(self, train_data, train_labels, test_data=None, test_labels=None):
         """
         This method applies sckilit-learn data transformations, while
         preserving the original layout of the data. Importantly, this method
@@ -75,18 +79,36 @@ class Transformer:
         :return: None
         :rtype: NoneType
         """
+
+        # fit to training, transform to train & test
         for scheme, feature in zip(self.schemes, self.features):
 
-            # fit to training, transform to train & test
             print(f"Applying {scheme} to features {feature}...")
-            self.tranformations.append(
-                (s(train[feature], test[feature] if test else None) for s in scheme)
+            self.data_tranforms.append(
+                (
+                    s(train_data[feature], test_data[feature] if test_data else None)
+                    for s in scheme
+                )
+            )
+
+        # apply label transformations
+        for label in self.lables:
+            print(f"Applying {label} to labels...")
+            self.label_transforms.append(
+                label(train_labels, test_labels) if test_labels else None
             )
 
         # save the original dataframe (temporarily convert column headers to strings)
-        train.set_axis(train.columns.astype(str), axis=1, inplace=True)
-        test.set_axis(test.columns.astype(str), axis=1, inplace=True) if test else None
-        self.original = {"train": train, "test": None}
+        train_data.set_axis(train_data.columns.astype(str), axis=1, inplace=True)
+        test_data.set_axis(
+            test_data.columns.astype(str), axis=1, inplace=True
+        ) if test_data else None
+        self.original = {
+            "train_data": train_data,
+            "train_labels": train_labels,
+            "test_data": test_data,
+            "test_lables": test_labels,
+        }
         return None
 
     def export(self, feature_names=None):
@@ -95,11 +117,12 @@ class Transformer:
         transformations. Specifically, it concatenates transformations to
         preserve their original orders and produces n copies of the dataset,
         where n is the product of the length of the tuples in
-        self.transformations. It takes no arguments so that the building
-        operation (which will be memory-intensive) can be called when it is
-        most appropriate (other than feature_names, which can optionally set
-        the column headers, of which a subset are modified if one-hot encoding
-        was used).
+        self.data_transforms and the length of self.label_transforms.
+        It takes no arguments so that the building operation (which will be
+        memory-intensive) can be called when it is most appropriate (other than
+        feature_names, which can optionally set the column headers, of which a
+        subset are modified if one-hot encoding was used). Finally, labels are
+        concatenated as the last column.
 
         :param feature_names: names of the features
         :type feature_names: tuple of strings
@@ -108,8 +131,8 @@ class Transformer:
         """
         for features, schemes, (train_transform, test_transform) in zip(
             itertools.repeat(self.features),
-            itertools.product(*self.schemes),
-            itertools.product(*self.transformations),
+            itertools.product(*(self.schemes + self.lables)),
+            itertools.product(*(self.data_transforms + self.label_transforms)),
         ):
             # assemble the dataframe based on the original indicies
             print(f"Exporting {'×'.join(*schemes)}...")
@@ -157,10 +180,10 @@ class Transformer:
             )
             yield (training, testing) if testing else training
 
-    def destupify(self, data):
+    def destupefy(self, data):
         """
         This method attempts to clean datasets after they have been processed.
-        At this time, destupify performs the following:
+        At this time, destupefy performs the following:
 
             - Removes any single-value columns
             - Removes any identical rows
