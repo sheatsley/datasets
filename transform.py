@@ -3,7 +3,7 @@ The transform module applies transformations to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Feb 15 2022
 """
-import itertools  # Functions creating iterators for efficient looping¶
+import itertools  # Functions creating iterators for efficient looping
 import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
@@ -36,9 +36,9 @@ class Transformer:
         """
         This function initializes Transformer objects with the necessary
         information to apply arbitrary transformations to data. Specifically,
-        the manipulated features are expected to be tuple of tuples, wherein the
-        number of datasets is the product of the lengths of the tuples. This
-        enables, for example, creation of multiple datasets with different
+        the manipulated features are expected to be tuple of tuples, wherein
+        the number of datasets is the product of the lengths of the tuples.
+        This enables, for example, creation of multiple datasets with different
         feature transformation schemes (described by the first tuple), all with
         label encoding (described by the second tuple). Consequently, the
         transformations applied to the features within each tuple is described
@@ -72,10 +72,14 @@ class Transformer:
         their original indicies, and returned (and thus, this method returns
         nothing).
 
-        :param train: the dataset to transform
-        :type train: pandas dataframe
-        :param test: the test set to transform (if applicable)
-        :type test: pandas dataframe
+        :param train_data: the dataset to transform
+        :type train_data: pandas dataframe
+        :param train_labels: labels for the training data
+        :type train_labels: pandas series
+        :param test_data: the test set to transform (if applicable)
+        :type test_data: pandas dataframe
+        :param test_labels: labels for the testing data (if applicable)
+        :type test_lables: pandas series
         :return: None
         :rtype: NoneType
         """
@@ -83,7 +87,7 @@ class Transformer:
         # fit to training, transform to train & test
         for scheme, feature in zip(self.schemes, self.features):
 
-            print(f"Applying {scheme} to features {feature}...")
+            print(f"Applying {scheme.__name__} to features {feature}...")
             self.data_tranforms.append(
                 (
                     s(train_data[feature], test_data[feature] if test_data else None)
@@ -92,22 +96,18 @@ class Transformer:
             )
 
         # apply label transformations
-        for label in self.lables:
-            print(f"Applying {label} to labels...")
+        for label in self.label:
+            print(f"Applying {label.__name__} to labels...")
             self.label_transforms.append(
                 label(train_labels, test_labels) if test_labels else None
             )
 
-        # save the original dataframe (temporarily convert column headers to strings)
-        train_data.set_axis(train_data.columns.astype(str), axis=1, inplace=True)
-        test_data.set_axis(
-            test_data.columns.astype(str), axis=1, inplace=True
-        ) if test_data else None
+        # save the original dataframe
         self.original = {
             "train_data": train_data,
             "train_labels": train_labels,
             "test_data": test_data,
-            "test_lables": test_labels,
+            "test_labels": test_labels,
         }
         return None
 
@@ -116,23 +116,22 @@ class Transformer:
         This method properly assembles datasets based on the applied
         transformations. Specifically, it concatenates transformations to
         preserve their original orders and produces n copies of the dataset,
-        where n is the product of the length of the tuples in
-        self.data_transforms and the length of self.label_transforms.
-        It takes no arguments so that the building operation (which will be
-        memory-intensive) can be called when it is most appropriate (other than
-        feature_names, which can optionally set the column headers, of which a
-        subset are modified if one-hot encoding was used). Finally, labels are
-        concatenated as the last column.
+        where n is the product of the lengths of the tuples in
+        self.data_transforms. It takes no arguments so that the building
+        operation (which will be memory-intensive) can be called when it is
+        most appropriate (other than feature_names, which can optionally set
+        the column headers, of which a subset are modified if one-hot encoding
+        was used).
 
         :param feature_names: names of the features
         :type feature_names: tuple of strings
         :return: the transformed datasets
-        :rtype: generator of pandas dataframes
+        :rtype: generator of tuples of pandas dataframes
         """
         for features, schemes, (train_transform, test_transform) in zip(
             itertools.repeat(self.features),
-            itertools.product(*(self.schemes + self.lables)),
-            itertools.product(*(self.data_transforms + self.label_transforms)),
+            itertools.product(*(self.schemes)),
+            itertools.product(*(self.data_transforms)),
         ):
             # assemble the dataframe based on the original indicies
             print(f"Exporting {'×'.join(*schemes)}...")
@@ -178,9 +177,12 @@ class Transformer:
                 training.shape,
                 testing.shape if testing else "",
             )
-            yield (training, testing) if testing else training
 
-    def destupefy(self, data):
+            # yield with each label transformation
+            for train_labels, test_labels in self.label_transforms:
+                yield training, train_labels, testing, test_labels
+
+    def destupefy(self, train, test=None):
         """
         This method attempts to clean datasets after they have been processed.
         At this time, destupefy performs the following:
@@ -195,13 +197,24 @@ class Transformer:
         :return: the cleaned datasets
         :rtype: pandas dataframe
         """
+
+        # doing this indepedently is unsafe; for now, fit to training data only
         print("Analyzing dataset for single-value columns...")
-        org_s, org_f = data.shape
-        data = data[data.columns[data.nunique() > 1]]
-        print(f"Dropped {data.shape[1]-org_f} features! Removing duplicate samples...")
-        data = data.drop_duplicates()
-        print(f"Dropped {data.shape[0]-org_s} samples! (New shape: {data.shape})")
-        return data
+        tr_os, tr_of = train.shape
+        _, te_of = test.shape if test else None, None
+        single_cols = train.columns[train.nunique() > 1]
+        train = train[single_cols]
+        test = test[single_cols] if test else None
+
+        # dropping duplicates can be done safely for both traing and testing
+        print(f"Dropped {train.shape[1]-tr_os} features! Removing duplicate samples...")
+        train = train.drop_duplicates()
+        print(f"Dropped {train.shape[0]-tr_of} samples! (New shape: {train.shape})")
+        test = test.drop_duplicates() if test else None
+        print(
+            f"Dropped {test.shape[0]-te_of} test samples! (New shape: {test.shape})"
+        ) if test else None
+        return train, test
 
     def labelencoder(self, train_labels, test_labels=None):
         """
