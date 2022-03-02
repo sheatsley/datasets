@@ -6,8 +6,9 @@ resultant arrays to disk.
 Author: Ryan Sheatsley
 Mon Feb 28 2022
 """
-
+import itertools  # Functions creating iterators for efficient looping
 import retrieve  # Download machine learning datasets
+import save  # Save (and load) machine learning datasets quickly
 import transform  # Apply transformations to machine learning datasets
 from utilities import print  # Timestamped printing
 
@@ -22,7 +23,6 @@ def main(
     outdir,
     precision,
     schemes,
-    verbose,
 ):
     """
     This function represents the heart of MachineLearningDatasets (MLDS). Given
@@ -47,7 +47,7 @@ def main(
     :param analytics: whether analytics are computed and saved
     :type analytics: bool
     :param dataset: dataset to download
-    :type dataset: string
+    :type dataset: str
     :param destupefy: whether data cleaning is performed (experimental)
     :type destupefy: bool
     :param features: features to manipulate
@@ -55,23 +55,68 @@ def main(
     :param labels: transfomrations to apply to the labels
     :type labels: tuple of tuples of Transformer callables
     :param names: filenames of the saved datasets
-    :type names: tuple of strings
+    :type names: tuple of str
     :param outdir: ouput directory of saved datasets
-    :type outdir: pathlib.Path object
+    :type outdir: pathlib path
     :param precision: dataset precision
-    :type precision: numpy data type
+    :type precision: numpy type
     :param schemes: transformations to apply to the data
     :type schemes: tuple of tuples of Transformer callables
-    :param verbose: whether to use verbose output
-    :type verbose: bool
     :return: None
     :rtype: NoneType
     """
 
-    # instantiate Downloader and Transformer objects
-    print("Instantiating Downloader and Transformer objects...")
+    # instantiate Downloader and download the dataset
+    print(f"Instantiating Downloader & downloading {dataset}...")
     downloader = retrieve.Downloader(dataset)
+    dataset = downloader.download()
+
+    # save features & transform to indicies (gets mangled in transformations)
+    feature_names = dataset[list(dataset)[0]].columns
+    for part in dataset:
+        dataset[part]["data"].columns = map(str, range(len(feature_names)))
+
+    # apply transformations for each partition and save
+    print("Instantiating Transformer & applying transformations...")
     transformer = transform.Transformer(features, labels, schemes)
+    parts = (
+        (("train", "test"),)
+        if "test" in dataset
+        else itertools.product(dataset, (None,))
+    )
+    for train, test in parts:
+        transformer.apply(
+            dataset[train]["data"],
+            dataset[train]["labels"],
+            dataset.get(test, {}).get("data"),
+            dataset.get(test, {}).get("labels"),
+        )
+
+        # assemble the transformations (and restore feature names)
+        for train_data, train_labels, test_data, test_labels, name in zip(
+            transformer.export(feature_names), names
+        ):
+
+            # if applicable, destupefy
+            train_data, test_data = (
+                transformer.destupefy(train_data, test_data)
+                if destupefy
+                else train_data,
+                test_data,
+            )
+
+            # save (with analytics, if desired)
+            save.write(
+                train_data,
+                train_labels,
+                test_data,
+                test_labels,
+                name,
+                precision=precision,
+                analytics=analytics,
+                outdir=outdir,
+            )
+    print(f"{dataset} retrieval, transformation, and export complete!")
     return None
 
 
