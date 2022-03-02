@@ -65,7 +65,7 @@ def parse_args():
         "-p",
         "--precision",
         help="maximum dataset precision",
-        default="float32",
+        default=np.float32,
         type=np.dtype,
     )
     p.add_argument(
@@ -89,12 +89,6 @@ def parse_args():
         "--destupefy",
         action="store_true",
         help="cleanup datasets automagically (experimental)",
-    )
-    p.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="increase verbosity",
     )
     p.add_argument(
         "--version",
