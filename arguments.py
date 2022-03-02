@@ -46,6 +46,7 @@ def parse_args():
         default=[],
         help="label manipulation scheme(s) to apply",
         nargs="*",
+        type=transformer_args,
     )
     p.add_argument(
         "-n",
@@ -65,6 +66,7 @@ def parse_args():
         "--precision",
         help="maximum dataset precision",
         default="float32",
+        type=np.dtype,
     )
     p.add_argument(
         "-s",
@@ -73,6 +75,7 @@ def parse_args():
         default=[],
         help="feature manipulation scheme(s) to apply",
         nargs="*",
+        type=transformer_args,
     )
 
     # flags
@@ -102,6 +105,18 @@ def parse_args():
     return p.parse_args()
 
 
+def transformer_args(arg):
+    """
+    This function casts schemes and labels as transformer callables.
+
+    :param args: scheme or label arguments
+    :type args: list of strings
+    :return: transformer callables
+    :rtype: list of Transformer methods
+    """
+    return getattr(transform.Transformer, arg)
+
+
 def validate_args():
     """
     This function executes a series of assertions and prints debug information
@@ -125,16 +140,6 @@ def validate_args():
     assert len(args.schemes) == len(args.features) == len(args.names), (
         "Schemes, features, and names are not equal length!"
         + f"{args.schemes, args.features, args.names}"
-    )
-
-    # precision must be a valid numpy data type
-    assert hasattr(np, args.precision)
-
-    # schemes & labels must be valid Transformer methods
-    assert all(
-        hasattr(transform.Transformer, t)
-        for tform in args.schemes + args.labels
-        for t in tform
     )
 
     # print parsed arguments as a sanity check
