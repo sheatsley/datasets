@@ -489,7 +489,7 @@ class Downloader:
         """
         return dataset(directory=directory).read()
 
-    def download(self, dataset):
+    def download(self):
         """
         This function dispatches dataset downloads to the respective handlers.
 
@@ -498,17 +498,17 @@ class Downloader:
         :return: the downloaded dataset
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
-        if dataset in self.pytorch_datasets:
+        if self.dataset in self.pytorch_datasets:
             return self.pytorch(
-                self.pytorch_datasets[dataset]["name"],
-                *self.pytorch_datasets[dataset]["part"],
+                self.pytorch_datasets[self.dataset]["name"],
+                *self.pytorch_datasets[self.dataset]["part"],
             )
-        elif dataset in self.tensorflow_datasets:
-            return self.tensorflow(dataset)
-        elif dataset in self.adapter_datasets:
-            return self.custom(self.adapter_datasets[dataset])
+        elif self.dataset in self.tensorflow_datasets:
+            return self.tensorflow(self.dataset)
+        elif self.dataset in self.adapter_datasets:
+            return self.custom(self.adapter_datasets[self.dataset])
         else:
-            raise KeyError(dataset, "not supported")
+            raise KeyError(self.dataset, "not supported")
 
     def pytorch(self, dataset, arg, parts, directory="/tmp/"):
         """
