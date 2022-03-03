@@ -86,21 +86,24 @@ class Transformer:
 
         # fit to training, transform to train & test
         for scheme, feature in zip(self.schemes, self.features):
-
-            print(f"Applying {scheme.__name__} to features {feature}...")
-            self.data_tranforms.append(
-                (
-                    s(train_data[feature], test_data[feature] if test_data else None)
+            print(
+                f"Applying {', '.join([s.__name__ for s in scheme])}",
+                f"to features {', '.join(map(str, feature))}...",
+            )
+            self.data_transforms.append(
+                [
+                    s.__get__(self)(
+                        train_data.iloc[:, feature],
+                        test_data.iloc[:, feature] if test_data is not None else None,
+                    )
                     for s in scheme
-                )
+                ]
             )
 
         # apply label transformations
-        for label in self.label:
+        for label in self.labels:
             print(f"Applying {label.__name__} to labels...")
-            self.label_transforms.append(
-                label(train_labels, test_labels) if test_labels else None
-            )
+            self.label_transforms.append(label.__get__(self)(train_labels, test_labels))
 
         # save the original dataframe
         self.original = {
@@ -128,24 +131,25 @@ class Transformer:
         :return: the transformed datasets
         :rtype: generator of tuples of pandas dataframes
         """
-        for features, schemes, (train_transform, test_transform) in zip(
+        for features, schemes, transforms in zip(
             itertools.repeat(self.features),
-            itertools.product(*(self.schemes)),
-            itertools.product(*(self.data_transforms)),
+            itertools.product(*self.schemes),
+            itertools.product(*self.data_transforms),
         ):
             # assemble the dataframe based on the original indicies
-            print(f"Exporting {'×'.join(*schemes)}...")
-            training = self.original["train"].assign(
+            print(f"Exporting {'×'.join([s.__name__ for s in schemes])}...")
+            train_transform, test_transform = zip(*transforms)
+            training = self.original["train_data"].assign(
                 **{
-                    str(f): t[idx]
+                    str(f): t.T[idx]
                     for idx, (f_tup, t) in enumerate(zip(features, train_transform))
                     for f in f_tup
                 }
             )
             testing = (
-                self.original["test"].assign(
+                self.original["test_data"].assign(
                     **{
-                        str(f): t[idx]
+                        str(f): t.T[idx]
                         for idx, (f_tup, t) in enumerate(zip(features, test_transform))
                         for f in f_tup
                     }
@@ -173,9 +177,9 @@ class Transformer:
 
             # print final shape as a sanity check and yield
             print(
-                f"{'×'.join(*schemes)} export complete! Final shape(s):",
-                training.shape,
-                testing.shape if testing else "",
+                f"{'×'.join([s.__name__ for s in schemes])} export complete!",
+                f"Final shape(s): {training.shape}",
+                f"{testing.shape}" if testing is not None else "",
             )
 
             # yield with each label transformation
@@ -201,55 +205,58 @@ class Transformer:
         # doing this indepedently is unsafe; for now, fit to training data only
         print("Analyzing dataset for single-value columns...")
         tr_os, tr_of = train.shape
-        _, te_of = test.shape if test else None, None
+        _, te_of = test.shape if test is not None else None, None
         single_cols = train.columns[train.nunique() > 1]
         train = train[single_cols]
-        test = test[single_cols] if test else None
+        test = test[single_cols] if test is not None else None
 
         # dropping duplicates can be done safely for both traing and testing
         print(f"Dropped {train.shape[1]-tr_os} features! Removing duplicate samples...")
         train = train.drop_duplicates()
         print(f"Dropped {train.shape[0]-tr_of} samples! (New shape: {train.shape})")
-        test = test.drop_duplicates() if test else None
+        test = test.drop_duplicates() if test is not None else None
         print(
             f"Dropped {test.shape[0]-te_of} test samples! (New shape: {test.shape})"
-        ) if test else None
+        ) if test is not None else None
         return train, test
 
-    def labelencoder(self, train_labels, test_labels=None):
+    def labelencoder(self, train, test=None):
         """
         This method serves as a simple wrapper for scikit-learn's LabelEncoder.
         Notably, we expect both training and testing labels as input (as any
         deficient test set that lacks samples from a given class will still be
         processed correctly).
 
-        :param train_labels: the training labels to transform
-        :type train_labels: pandas series
-        :param test_labels: the testing labels to transform
-        :type test_labels: pandas series
+        :param train: the training labels to transform
+        :type train: pandas series
+        :param test: the testing labels to transform
+        :type test: pandas series
         :return: integer-encoded labels
         :rtype: tuple of pandas series
         """
         encoder = sklearn.preprocessing.LabelEncoder()
-        train_labels = encoder.fit_transform(train_labels)
+        train = encoder.fit_transform(train)
         print(f"Transformed {len(encoder.classes_)} classes.")
-        return train_labels, encoder.transform(test_labels) if test_labels else None
+        return train, encoder.transform(test) if test is not None else None
 
     def minmaxscaler(self, train, test=None):
         """
         This method serves as a simple wrapper for scikit-learn's MinMaxScaler.
 
-        :param train: the training data to tranform
+        :param train: the training data to transform
         :type train: pandas dataframe
         :param test: the testing data to transform
         :type test: pandas dataframe
         :return: transformed data
         :rtype: tuple of pandas series
         """
-        print(f"Applying min-max scaling to data of shape {train.shape}...")
+        print(
+            f"Applying min-max scaling to data of shape {train.shape}",
+            f"and {test.shape}..." if test is not None else "...",
+        )
         scaler = sklearn.preprocessing.MinMaxScaler()
         train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test else None
+        return train, scaler.transform(test) if test is not None else None
 
     def onehotencoder(self, train, test=None):
         """
@@ -258,19 +265,25 @@ class Transformer:
         call to this method to facilitate correct feature labels when
         feature_names is passed into the export method.
 
-        :param train: the training data to tranform
+        :param train: the training data to transform
         :type train: pandas dataframe
         :param test: the testing data to transform
         :type test: pandas dataframe
         :return: transformed data
         :rtype: tuple of pandas dataframes
         """
-        print(f"Applying one-hot encoding to data of shape {train.shape}...")
-        encoder = sklearn.preprocessing.OneHotEncoder()
+        print(
+            f"Applying one-hot encoding to data of shape {train.shape}",
+            f"and {test.shape}..." if test is not None else "...",
+        )
+        encoder = sklearn.preprocessing.OneHotEncoder(sparse=False)
         train = encoder.fit_transform(train)
         self.ohe_f += encoder.categories_
-        print(f"Encoding complete. Expanded shape: {train.shape}")
-        return train, encoder.transform(test) if test else None
+        print(
+            f"Encoding complete. Expanded shape(s): {train.shape}",
+            f"{test.shape}" if test is not None else "",
+        )
+        return train, encoder.transform(test) if test is not None else None
 
     def raw(self, train, test=None):
         """
@@ -283,34 +296,40 @@ class Transformer:
         """
         This method serves as a simple wrapper for scikit-learn's RobustScaler.
 
-        :param train: the training data to tranform
+        :param train: the training data to transform
         :type train: pandas dataframe
         :param test: the testing data to transform
         :type test: pandas dataframe
         :return: transformed data
         :rtype: tuple of pandas dataframes
         """
-        print(f"Applying robust scaling to data of shape {train.shape}...")
+        print(
+            f"Applying robust scaling to data of shape {train.shape}",
+            f"and {test.shape}..." if test is not None else "...",
+        )
         scaler = sklearn.preprocessing.RobustScaler()
         train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test else None
+        return train, scaler.transform(test) if test is not None else None
 
     def standardscaler(self, train, test=None):
         """
         This method serves as a simple wrapper for scikit-learn's
         StandardScaler.
 
-        :param train: the training data to tranform
+        :param train: the training data to transform
         :type train: pandas dataframe
         :param test: the testing data to transform
         :type test: pandas dataframe
         :return: transformed data
         :rtype: tuple of pandas dataframes
         """
-        print(f"Applying standard scaling to data of shape {train.shape}...")
+        print(
+            f"Applying standard scaling to data of shape {train.shape}",
+            f"and {test.shape}..." if test is not None else "...",
+        )
         scaler = sklearn.preprocessing.RobustScaler()
         train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test else None
+        return train, scaler.transform(test) if test is not None else None
 
 
 if __name__ == "__main__":
