@@ -51,7 +51,7 @@ def main(
     :param destupefy: whether data cleaning is performed (experimental)
     :type destupefy: bool
     :param features: features to manipulate
-    :type features: tuple of tuples containing indicies
+    :type features: tuple of tuples containing str
     :param labels: transfomrations to apply to the labels
     :type labels: tuple of tuples of Transformer callables
     :param names: filenames of the saved datasets
@@ -72,13 +72,32 @@ def main(
     dataset = downloader.download()
 
     # save features & transform to indicies (gets mangled in transformations)
-    feature_names = dataset[list(dataset)[0]].columns
+    f_names = dataset[list(dataset)[0]]["data"].columns
     for part in dataset:
-        dataset[part]["data"].columns = map(str, range(len(feature_names)))
+        dataset[part]["data"].columns = map(str, range(len(f_names)))
+
+    # convert features to indicies  (exclude one-hot regions from 'all' keyword)
+    print("Converting features to indicies...")
+    try:
+        ohot_loc = schemes.index(
+            [t for t in schemes if transform.Transformer.onehotencoder in t][0]
+        )
+    except IndexError:
+        ohot_loc = None
+    ohots = {f_names.get_loc(f) for f in features[ohot_loc]} if ohot_loc else {}
+    idx_feat = [
+        list(
+            itertools.chain.from_iterable(
+                [f_names.get_loc(f)] if f != "all" else set(range(len(f_names))) - ohots
+                for f in feature
+            ),
+        )
+        for feature in features
+    ]
 
     # apply transformations for each partition and save
     print("Instantiating Transformer & applying transformations...")
-    transformer = transform.Transformer(features, labels, schemes)
+    transformer = transform.Transformer(idx_feat, labels, schemes)
     parts = (
         (("train", "test"),)
         if "test" in dataset
@@ -94,7 +113,7 @@ def main(
 
         # assemble the transformations (and restore feature names)
         for train_data, train_labels, test_data, test_labels, name in zip(
-            transformer.export(feature_names), names
+            transformer.export(f_names), names
         ):
 
             # if applicable, destupefy
