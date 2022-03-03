@@ -14,6 +14,11 @@ from utilities import print  # Timestamped printing
 # compute pearson correlation matricies
 
 
+def analyze(training, testing=None):
+    """ """
+    return None
+
+
 def write(
     train_data,
     train_labels,
@@ -53,7 +58,7 @@ def write(
     """
 
     # concatenate labels & convert to numpy arrays
-    print(f"Assembling dataset and converting to (max) {precision} numpy arrays...")
+    print(f"Assembling {name} and converting to (max) {precision} numpy arrays...")
     training = pandas.concat((train_data, train_labels), axis=1)
     testing = pandas.concat((test_data, test_labels), axis=1) if test_data else None
     training = training.to_numpy()
@@ -64,10 +69,19 @@ def write(
         else training.dtype
     )
     print(
-        f"Lowering precision to {precision}..."
+        f"Dropping precision to {precision}..."
     ) if precision != training.dtype else None
     training = np.astype(training, precision)
     testing = np.astype(testing, precision) if testing else None
+
+    # save the results to disk
+    print(f"Writing {name + '_training' if test_data else ''} to {outdir}...")
+    np.save(outdir / (name + "_training" if test_data else ""), training)
+    print(f"Writing {name + '_testing'} to {outdir}..." if test_data else None)
+    np.save(outdir / (name + "_testing"), test_data) if test_data else None
+
+    # compute analyitcs if desired
+    analyze(training, testing) if analytics else None
     return None
 
 
