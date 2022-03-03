@@ -8,6 +8,7 @@ import itertools  # Functions creating iterators for efficient looping¶
 import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
 import transform  # Order-preserving transformations for machine learning data
+from utilities import print  # Timestamped printing
 
 
 def parse_args():
@@ -42,7 +43,7 @@ def parse_args():
     p.add_argument(
         "-l",
         "--labels",
-        action="append",
+        # action="append",
         default=[],
         help="label manipulation scheme(s) to apply",
         nargs="*",
@@ -122,18 +123,31 @@ def validate_args():
 
     # extract command-line args, correct dataset names, & run assertions
     args = parse_args()
+    datasets = list(itertools.product(*args.schemes, args.labels))
     args.names = (
         args.names
         if args.names
         else [
-            "_".join([args.dataset] + list(s)) for s in itertools.product(*args.schemes)
+            "_".join([args.dataset] + [s.__name__ for s in scheme])
+            for scheme in datasets
         ]
     )
 
-    # schemes, features, and names must be the same length
-    assert len(args.schemes) == len(args.features) == len(args.names), (
-        "Schemes, features, and names are not equal length!"
-        + f"{args.schemes, args.features, args.names}"
+    # schemes and features must be the same length
+    assert len(args.schemes) == len(args.features), (
+        "Schemes and features are not equal length!"
+        + f"{[[s.__name__ for s in scheme] for scheme in args.schemes], args.features}"
+    )
+
+    # names must be equal to the product of lengths of schemes & labels
+    assert len(args.names) == len(datasets), (
+        "Names must be equal to the number of produced datasets! "
+        + f"{args.names} != "
+        + str(
+            "×".join(
+                [str([s.__name__ for s in sc]) for sc in args.schemes + [args.labels]]
+            )
+        )
     )
 
     # print parsed arguments as a sanity check
