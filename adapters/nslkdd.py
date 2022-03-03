@@ -6,6 +6,7 @@ Wed Feb 9 2022
 from adapters import baseadapter  # Base Adapter class for custom datasets
 import io  # Core tools for working with streams
 import pandas  # Python Data Analysis Library
+from utilities import print  # Timestamped printing
 import zipfile  # Work with ZIP archives
 
 
