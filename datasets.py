@@ -27,7 +27,7 @@ def main(
     """
     This function represents the heart of MachineLearningDatasets (MLDS). Given
     a dataset, a list of features, a list of label transformations, a list of
-    output names, an output directory, numerical precision, a list of
+    output names, an output directory, numerical precision, a list of data
     transformation schemes, and whether to produce resultant analyitcs and
     apply (experimental) destupefication subroutines, MLDS will perform the
     following steps:
@@ -52,7 +52,7 @@ def main(
     :type destupefy: bool
     :param features: features to manipulate
     :type features: tuple of tuples containing str
-    :param labels: transfomrations to apply to the labels
+    :param labels: transformations to apply to the labels
     :type labels: tuple of tuples of Transformer callables
     :param names: filenames of the saved datasets
     :type names: tuple of str
@@ -71,65 +71,48 @@ def main(
     downloader = retrieve.Downloader(dataset)
     dataset = downloader.download()
 
-    # save features & transform to indicies (gets mangled in transformations)
-    f_names = dataset[list(dataset)[0]]["data"].columns
-    for part in dataset:
-        dataset[part]["data"].columns = map(str, range(len(f_names)))
+    # extract features (needed for "all" keyword) from first data partition
+    part = next(iter(dataset))
+    feat_names = dataset[part]["data"].columns
+    print(f"Inferred {len(feat_names)} features from {part} partition.")
 
-    # convert features to indicies  (exclude one-hot regions from 'all' keyword)
-    print("Converting features to indicies...")
-    try:
-        ohot_loc = schemes.index(
-            [t for t in schemes if transform.Transformer.onehotencoder in t][0]
-        )
-    except IndexError:
-        ohot_loc = None
-    ohots = {f_names.get_loc(f) for f in features[ohot_loc]} if ohot_loc else {}
-    idx_feat = [
-        list(
-            itertools.chain.from_iterable(
-                [f_names.get_loc(f)] if f != "all" else set(range(len(f_names))) - ohots
-                for f in feature
-            ),
-        )
-        for feature in features
+    # resovle "all" keyword to feature names minus those used in one-hot encoding
+    print("Resolving 'all' keyword with inferred features...")
+    ohot_feat = [
+        f for s, f in zip(schemes, features) if transform.Transformer.onehotencoder in s
     ]
+    all_feat = feat_names.difference(*ohot_feat, sort=False).tolist()
+    features = [all_feat if f == ["all"] else f for f in features]
 
-    # apply transformations for each partition and save
+    # ensure that training preceeds testing to ensure correct transformation fits
     print("Instantiating Transformer & applying transformations...")
-    transformer = transform.Transformer(idx_feat, labels, schemes)
     parts = (
-        (("train", "test"),)
-        if "test" in dataset
-        else itertools.product(dataset, (None,))
+        (["train", "test"] + [p for p in dataset if p not in {"train", "test"}])
+        if all(p in {"train", "test"} for p in dataset)
+        else list(dataset)
     )
-    for train, test in parts:
-        transformer.apply(
-            dataset[train]["data"],
-            dataset[train]["labels"],
-            dataset.get(test, {}).get("data"),
-            dataset.get(test, {}).get("labels"),
-        )
+    transformer = transform.Transformer(features, labels, schemes)
+
+    # apply transformations to each parittion
+    for part in parts:
+        transformer.apply(*dataset[part].values(), part != "test")
 
         # assemble the transformations (and restore feature names)
-        for train_data, train_labels, test_data, test_labels, name in zip(
-            transformer.export(f_names), names
+        for transformed_data, transformed_labels, name in zip(
+            transformer.export(), names
         ):
 
             # if applicable, destupefy
-            train_data, test_data = (
-                transformer.destupefy(train_data, test_data)
+            transformed_data = (
+                transformer.destupefy(transformed_data)
                 if destupefy
-                else train_data,
-                test_data,
+                else transformed_data
             )
 
             # save (with analytics, if desired)
             save.write(
-                train_data,
-                train_labels,
-                test_data,
-                test_labels,
+                transformed_data,
+                transformed_labels,
                 name,
                 precision=precision,
                 analytics=analytics,
@@ -154,12 +137,12 @@ if __name__ == "__main__":
     This (1) downloads the NSL-KDD, (2) selects "duration" and "count" as one
     group and "service" as the second group, (3) specifies an alternative
     output directory (instead of "out/"), (4) changes the base dataset name (to
-    "nslkdd_mod") when saved, (5) creates two copies of the dataset: one where
-    "duration" & "count" (subgroup one) are standaridized and another where
-    they are rescaled, and, in both copies, "service" (group two) is one-hot
-    encoded, (6) encodes labels as integers for both dataset copies, and (7)
-    computes basic analytics, and (8) applies destupefication (to both dataset
-    copies).
+    "nslkdd_ss" and "nslkdd_mms") when saved, (5) creates two copies of the
+    dataset: one where "duration" & "count" (subgroup one) are standaridized
+    and another where they are rescaled, and, in both copies, "service" (group
+    two) is one-hot encoded, (6) encodes labels as integers for both dataset
+    copies, and (7) computes basic analytics, and (8) applies destupefication
+    (to both dataset copies).
     """
     import arguments  # Command-line Argument parsing
 
