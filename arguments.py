@@ -166,12 +166,12 @@ if __name__ == "__main__":
     This (1) downloads the NSL-KDD, (2) selects "duration" and "count" as one
     group and "service" as the second group, (3) specifies an alternative
     output directory (instead of "out/"), (4) changes the base dataset name (to
-    "nslkdd_mod") when saved, (5) creates two copies of the dataset: one where
-    "duration" & "count" (subgroup one) are standaridized and another where
-    they are rescaled, and, in both copies, "service" (group two) is one-hot
-    encoded, (6) encodes labels as integers for both dataset copies, and (7)
-    computes basic analytics, and (8) applies destupefication (to both dataset
-    copies).
+    "nslkdd_ss" and "nslkdd_mms") when saved, (5) creates two copies of the
+    dataset: one where "duration" & "count" (subgroup one) are standaridized
+    and another where they are rescaled, and, in both copies, "service" (group
+    two) is one-hot encoded, (6) encodes labels as integers for both dataset
+    copies, and (7) computes basic analytics, and (8) applies destupefication
+    (to both dataset copies).
     """
     import sys  # System-specific parameters and functions
 
