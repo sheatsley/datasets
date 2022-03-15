@@ -3,6 +3,7 @@ The transform module applies transformations to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Feb 15 2022
 """
+import bisect  # Array bisection algorithm
 import itertools  # Functions creating iterators for efficient looping
 import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
@@ -46,7 +47,7 @@ class Transformer:
         of tuples (in features) containing Transformer method callables.
 
         :param features: the features to manipulate
-        :type features: tuple of tuples containing indicies
+        :type features: list of lists containing strings or indicies
         :param labels: transfomrations to apply to the labels
         :type labels: tuple of tuples of Transformer callables
         :param schemes: transformations to apply to the data
@@ -56,14 +57,17 @@ class Transformer:
         """
         self.features = features
         self.schemes = schemes
-        self.data_transforms = []
-        self.ohe_f = []
         self.labels = labels
-        self.label_transforms = []
-        self.original = None
+
+        # instantiate transformers to support transforms for test set
+        self.le = sklearn.preprocessing.LabelEncoder()
+        self.ohe = sklearn.preprocessing.OneHotEncoder(sparse=False)
+        self.mms = sklearn.preprocessing.MinMaxScaler()
+        self.rs = sklearn.preprocessing.RobustScaler()
+        self.ss = sklearn.preprocessing.StandardScaler()
         return None
 
-    def apply(self, train_data, train_labels, test_data=None, test_labels=None):
+    def apply(self, data, labels, fit=True):
         """
         This method applies sckilit-learn data transformations, while
         preserving the original layout of the data. Importantly, this method
@@ -72,46 +76,45 @@ class Transformer:
         their original indicies, and returned (and thus, this method returns
         nothing).
 
-        :param train_data: the dataset to transform
-        :type train_data: pandas dataframe
-        :param train_labels: labels for the training data
-        :type train_labels: pandas series
-        :param test_data: the test set to transform (if applicable)
-        :type test_data: pandas dataframe
-        :param test_labels: labels for the testing data (if applicable)
-        :type test_lables: pandas series
+        :param data: the dataset to transform
+        :type data: pandas dataframe
+        :param labels: labels for the training data
+        :type labels: pandas series
+        :param fit: whether transformers should fit (or just transform) the data
+        :type fit: bool
         :return: None
         :rtype: NoneType
         """
 
-        # fit to training, transform to train & test
+        # drop transformations from prior parts
+        self.data_transforms = []
+        self.label_transforms = []
+
+        # save feature names for export later & pass untouched features to raw
+        self.feature_names = data.columns.tolist() if fit else self.feature_names
+        untransformed_feat = list(set(self.feature_names).difference(*self.features))
+        if untransformed_feat:
+            self.features.append(untransformed_feat)
+            self.schemes.append(Transformer.raw)
+            print(
+                "The following features will be passed through:",
+                ", ".join(untransformed_feat),
+            )
+
+        # fit to all parts except test set, transform everything
         for scheme, feature in zip(self.schemes, self.features):
             print(
                 f"Applying {', '.join([s.__name__ for s in scheme])}",
-                f"to features {', '.join(map(str, feature))}...",
+                f"to features: {', '.join(feature)}...",
             )
             self.data_transforms.append(
-                [
-                    s.__get__(self)(
-                        train_data.iloc[:, feature],
-                        test_data.iloc[:, feature] if test_data is not None else None,
-                    )
-                    for s in scheme
-                ]
+                [s.__get__(self)(data[feature], fit) for s in scheme]
             )
 
         # apply label transformations
         for label in self.labels:
             print(f"Applying {label.__name__} to labels...")
-            self.label_transforms.append(label.__get__(self)(train_labels, test_labels))
-
-        # save the original dataframe
-        self.original = {
-            "train_data": train_data,
-            "train_labels": train_labels,
-            "test_data": test_data,
-            "test_labels": test_labels,
-        }
+            self.label_transforms.append(label.__get__(self)(labels, fit))
         return None
 
     def export(self, feature_names=None):
@@ -127,7 +130,7 @@ class Transformer:
         was used).
 
         :param feature_names: names of the features
-        :type feature_names: tuple of strings
+        :type feature_names: list of strings
         :return: the transformed datasets
         :rtype: generator of tuples of pandas dataframes
         """
@@ -139,11 +142,37 @@ class Transformer:
             # assemble the dataframe based on the original indicies
             print(f"Exporting {'×'.join([s.__name__ for s in schemes])}...")
             train_transform, test_transform = zip(*transforms)
+
+            # correct feature indicies if this export uses one-hot encoding
+            try:
+                ohot_idx = schemes.index(Transformer.onehotencoder)
+                ohotf = features[ohot_idx]
+                offsets = list(itertools.accumulate(len(f) - 1 for f in self.ohe_f))
+
+                # offset non-onehot features, else expand them
+                for idx, f_set in enumerate(features):
+                    features[idx] = (
+                        [
+                            f + ([0] + offsets + [0])[bisect.bisect(ohotf, f)]
+                            for f in f_set
+                        ]
+                        if idx != ohot_idx
+                        else [
+                            range(
+                                f + (offsets[idx - 1] if idx != 0 else 0),
+                                f + offsets[idx] + 1,
+                            )
+                            for idx, f in enumerate(f_set)
+                        ]
+                    )
+
+            except ValueError:
+                pass
             training = self.original["train_data"].assign(
                 **{
                     str(f): t.T[idx]
-                    for idx, (f_tup, t) in enumerate(zip(features, train_transform))
-                    for f in f_tup
+                    for idx, (f_set, t) in enumerate(zip(features, train_transform))
+                    for f in f_set
                 }
             )
             testing = (
@@ -159,9 +188,9 @@ class Transformer:
             )
 
             # set feature_names (and correct for one-hot encodings)
-            if feature_names:
+            if feature_names is not None:
                 try:
-                    ohotf = features[schemes.index("onehotencoder")]
+                    ohotf = features[schemes.index(Transformer.onehotencoder)]
                     for idx, ohf in enumerate(ohotf):
 
                         # this is a dynamically changing list; offset each iteration
@@ -220,116 +249,102 @@ class Transformer:
         ) if test is not None else None
         return train, test
 
-    def labelencoder(self, train, test=None):
+    def labelencoder(self, labels, fit):
         """
         This method serves as a simple wrapper for scikit-learn's LabelEncoder.
-        Notably, we expect both training and testing labels as input (as any
-        deficient test set that lacks samples from a given class will still be
-        processed correctly).
 
-        :param train: the training labels to transform
-        :type train: pandas series
-        :param test: the testing labels to transform
-        :type test: pandas series
+        :param labels: the labels to transform
+        :type labels: pandas series
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
         :return: integer-encoded labels
-        :rtype: tuple of pandas series
+        :rtype: numpy array
         """
-        encoder = sklearn.preprocessing.LabelEncoder()
-        train = encoder.fit_transform(train)
-        print(f"Transformed {len(encoder.classes_)} classes.")
-        return train, encoder.transform(test) if test is not None else None
+        print(f"Applying label encoding to {labels.size} samples...")
+        data = self.le.fit_transform(labels) if fit else self.le.transform(labels)
+        print(f"Transformed {', '.join(self.le.classes_)} to integers.")
+        return data
 
-    def minmaxscaler(self, train, test=None):
+    def minmaxscaler(self, data, fit):
         """
         This method serves as a simple wrapper for scikit-learn's MinMaxScaler.
 
-        :param train: the training data to transform
-        :type train: pandas dataframe
-        :param test: the testing data to transform
-        :type test: pandas dataframe
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
         :return: transformed data
-        :rtype: tuple of pandas series
+        :rtype: numpy array
         """
-        print(
-            f"Applying min-max scaling to data of shape {train.shape}",
-            f"and {test.shape}..." if test is not None else "...",
-        )
-        scaler = sklearn.preprocessing.MinMaxScaler()
-        train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test is not None else None
+        print(f"Applying min-max scaling to data of shape {data.shape}...")
+        return self.mms.fit_transform(data) if fit else self.mms.transform(data)
 
-    def onehotencoder(self, train, test=None):
+    def onehotencoder(self, data, fit):
         """
         This method serves as a simple wrapper for scikit-learn's
-        OneHotEncoder. Importantly, the categories_ attribute is saved on each
-        call to this method to facilitate correct feature labels when
-        feature_names is passed into the export method.
+        OneHotEncoder. Importantly, this also alters the class attribute
+        feature_names so that it is correct when exporting.
 
-        :param train: the training data to transform
-        :type train: pandas dataframe
-        :param test: the testing data to transform
-        :type test: pandas dataframe
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
         :return: transformed data
-        :rtype: tuple of pandas dataframes
+        :rtype: numpy array
         """
-        print(
-            f"Applying one-hot encoding to data of shape {train.shape}",
-            f"and {test.shape}..." if test is not None else "...",
-        )
-        encoder = sklearn.preprocessing.OneHotEncoder(sparse=False)
-        train = encoder.fit_transform(train)
-        self.ohe_f += encoder.categories_
-        print(
-            f"Encoding complete. Expanded shape(s): {train.shape}",
-            f"{test.shape}" if test is not None else "",
-        )
-        return train, encoder.transform(test) if test is not None else None
+        print(f"Applying one-hot encoding to data of shape {data.shape}...")
+        data = self.ohe.fit_transform(data) if fit else self.ohe.transform(data)
+        print(f"Encoding shape expanded to {data.shape}.")
 
-    def raw(self, train, test=None):
+        # ensure feature_names reflects the expanded space
+        for idx, ohot_feat in enumerate(self.ohe.feature_names_in_):
+            org_idx = self.feature_names.index(ohot_feat)
+            self.feature_names[org_idx : org_idx + 1] = self.ohe.categories_[idx]
+        return data
+
+    def raw(self, data, fit):
         """
         This method serves as a transformation no-op; the data is returned
         as-is.
-        """
-        return train, test
 
-    def robustscaler(self, train, test=None):
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
+        :return: transformed data
+        :rtype: numpy array
+        """
+        print(f"Apply raw scaling (no-op) to data of shape {data.shape}...")
+        return data
+
+    def robustscaler(self, data, fit):
         """
         This method serves as a simple wrapper for scikit-learn's RobustScaler.
 
-        :param train: the training data to transform
-        :type train: pandas dataframe
-        :param test: the testing data to transform
-        :type test: pandas dataframe
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
         :return: transformed data
-        :rtype: tuple of pandas dataframes
+        :rtype: numpy array
         """
-        print(
-            f"Applying robust scaling to data of shape {train.shape}",
-            f"and {test.shape}..." if test is not None else "...",
-        )
-        scaler = sklearn.preprocessing.RobustScaler()
-        train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test is not None else None
+        print(f"Applying robust scaling to data of shape {data.shape}...")
+        return self.rs.fit_transform(data) if fit else self.rs.transform(data)
 
-    def standardscaler(self, train, test=None):
+    def standardscaler(self, data, fit):
         """
         This method serves as a simple wrapper for scikit-learn's
         StandardScaler.
 
-        :param train: the training data to transform
-        :type train: pandas dataframe
-        :param test: the testing data to transform
-        :type test: pandas dataframe
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
         :return: transformed data
-        :rtype: tuple of pandas dataframes
+        :rtype: numpy array
         """
-        print(
-            f"Applying standard scaling to data of shape {train.shape}",
-            f"and {test.shape}..." if test is not None else "...",
-        )
-        scaler = sklearn.preprocessing.RobustScaler()
-        train = scaler.fit_transform(train)
-        return train, scaler.transform(test) if test is not None else None
+        print(f"Applying standard scaling to data of shape {data.shape}...")
+        return self.ss.fit_transform(data) if fit else self.ss.transform(data)
 
 
 if __name__ == "__main__":
