@@ -3,8 +3,8 @@ The transform module applies transformations to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Feb 15 2022
 """
-import bisect  # Array bisection algorithm
 import itertools  # Functions creating iterators for efficient looping
+import pandas  # Python Data Analysis Library
 import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
@@ -117,7 +117,7 @@ class Transformer:
             self.label_transforms.append(label.__get__(self)(labels, fit))
         return None
 
-    def export(self, feature_names=None):
+    def export(self):
         """
         This method properly assembles datasets based on the applied
         transformations. Specifically, it concatenates transformations to
@@ -125,95 +125,42 @@ class Transformer:
         where n is the product of the lengths of the tuples in
         self.data_transforms. It takes no arguments so that the building
         operation (which will be memory-intensive) can be called when it is
-        most appropriate (other than feature_names, which can optionally set
-        the column headers, of which a subset are modified if one-hot encoding
-        was used).
+        most appropriate.
 
-        :param feature_names: names of the features
-        :type feature_names: list of strings
         :return: the transformed datasets
-        :rtype: generator of tuples of pandas dataframes
+        :rtype: generator of pandas dataframes
         """
-        for features, schemes, transforms in zip(
+        for feature_list, scheme_list, transform_list in zip(
             itertools.repeat(self.features),
             itertools.product(*self.schemes),
             itertools.product(*self.data_transforms),
         ):
-            # assemble the dataframe based on the original indicies
-            print(f"Exporting {'×'.join([s.__name__ for s in schemes])}...")
-            train_transform, test_transform = zip(*transforms)
+            # assemble the dataframe in the original order
+            print(f"Exporting {'×'.join([s.__name__ for s in scheme_list])}...")
+            dataset = len(self.feature_names) * [None]
+            for features, scheme, transform in zip(
+                feature_list, scheme_list, transform_list
+            ):
 
-            # correct feature indicies if this export uses one-hot encoding
-            try:
-                ohot_idx = schemes.index(Transformer.onehotencoder)
-                ohotf = features[ohot_idx]
-                offsets = list(itertools.accumulate(len(f) - 1 for f in self.ohe_f))
+                # check if the scheme expanded the features
+                if len(features) != len(transform.T):
+                    print(f"{scheme.__name__} expanded features! Correcting...")
+                    features = list(itertools.chain(*self.ohe.categories_))
 
-                # offset non-onehot features, else expand them
-                for idx, f_set in enumerate(features):
-                    features[idx] = (
-                        [
-                            f + ([0] + offsets + [0])[bisect.bisect(ohotf, f)]
-                            for f in f_set
-                        ]
-                        if idx != ohot_idx
-                        else [
-                            range(
-                                f + (offsets[idx - 1] if idx != 0 else 0),
-                                f + offsets[idx] + 1,
-                            )
-                            for idx, f in enumerate(f_set)
-                        ]
-                    )
+                for feature, values in zip(features, transform.T):
+                    dataset[self.feature_names.index(feature)] = values
 
-            except ValueError:
-                pass
-            training = self.original["train_data"].assign(
-                **{
-                    str(f): t.T[idx]
-                    for idx, (f_set, t) in enumerate(zip(features, train_transform))
-                    for f in f_set
-                }
-            )
-            testing = (
-                self.original["test_data"].assign(
-                    **{
-                        str(f): t.T[idx]
-                        for idx, (f_tup, t) in enumerate(zip(features, test_transform))
-                        for f in f_tup
-                    }
-                )
-                if test_transform
-                else None
-            )
-
-            # set feature_names (and correct for one-hot encodings)
-            if feature_names is not None:
-                try:
-                    ohotf = features[schemes.index(Transformer.onehotencoder)]
-                    for idx, ohf in enumerate(ohotf):
-
-                        # this is a dynamically changing list; offset each iteration
-                        ohf += sum((len(self.ohe_f[i]) - 1 for i in range(idx)))
-                        print(f"Expanding {feature_names[ohf]} to {self.ohe_f[idx]}...")
-                        feature_names[ohf : ohf + 1] = self.ohe_f[idx]
-                except ValueError:
-                    pass
-                training.set_axis(feature_names, axis=1, inplace=True)
-                testing.set_axis(
-                    feature_names, axis=1, inplace=True
-                ) if testing else None
-
-            # print final shape as a sanity check and yield
+            # convert to pandas dataframe, set header, print shape, and yield
             print(
-                f"{'×'.join([s.__name__ for s in schemes])} export complete!",
-                f"Final shape(s): {training.shape}",
-                f"{testing.shape}" if testing is not None else "",
+                {"×".join([s.__name for s in scheme_list])},
+                "assembled. Creating dataframe...",
             )
+            dataset = pandas.DataFrame(list(zip(*dataset)), columns=self.feature_names)
+            print(f"Dataframe complete. Final shape: {dataset.shape}")
 
             # yield with each label transformation
-            for train_labels, test_labels in self.label_transforms:
-                yield training, train_labels, testing, test_labels
+            for labels in self.label_transforms:
+                yield dataset, labels
 
     def destupefy(self, train, test=None):
         """
