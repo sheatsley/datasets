@@ -8,13 +8,130 @@ import pandas  # Python Data Analysis Library
 import sklearn.preprocessing  # Preprocessing and Normalization
 from utilities import print  # Timestamped printing
 
-# TODO
-# destupefy should cleanse for unknown values: min(drop_samples, drop_columns)
+
+class Destupefier(sklearn.base.TransformerMixin):
+    """
+    The Destupefier is an (experimental) stateful transformer, such as those in
+    sklearn.preprocessing module. After dataframes have been assembled, this
+    class "cleans" datasets by attempting to identifiy data deficiencies
+    through a series of checks. At this time, the following is performed (in
+    this order):
+
+        (1) Any unknown values are removed (max of columns and rows are kept).
+        (2) Any identical columns are removed (first occurance is kept).
+        (3) Any identical rows are removed (first occurance is kept).
+        (4) Any single-value columns are removed.
+
+    Notably, we subclass sklearn's TransformerMixin (as opposed to using
+    FunctionTransformer directly) for state: if we find, for example, in a
+    training set that a feature has a single value, then that feature will be
+    removed, and thus, the same transformation needs to be applied to a test
+    set (if provided), regardless if the test set has more than one value for
+    that feature (a rather pathelogical scenario).
+
+    Moreover, we do not define a fit method as there are a suite of scenarios
+    where removing columns or rows (based on invalid values, duplicity, etc.)
+    can cause other nonideal scenarios to reappear (such as removing a
+    duplicate row could cause unique columns to become duplicates). Thus,
+    simply identifying definciencies here offers little utility since some can
+    arise as result of addressing others, and so, this method does nothing.
+
+    :func:`__init__`: instantiates Destupifier objects
+    :func:`transform`: identifies & corrects deficiencies
+    """
+
+    def __init__(self, unknowns=set("")):
+        """
+        This method instantiates Destupefier transformer objects. It accepts a
+        single argument (unknowns), which defines the set of *additional* NA
+        values beyond None and NAN (i.e., data entries that are invalid,
+        unfilled, errornous, etc.), as Pandas already recognizes None and NAN
+        to be invalid values. Such values are removed from the dataframe on
+        transform.
+
+        :param unknowns: additional values to be considered invalid
+        :type unknowns: set of miscellaneous datatypes
+        :return: a Destupefier transformer
+        :rtype: Destupefier object
+        """
+        self.unknowns = unknowns
+        return None
+
+    def transform(self, dataset, labels, fit=True):
+        """
+        This method identifies the deficiencies above and corrects them.
+        Importantly, some cleaning procedures (such as removing single-value or
+        duplicate features) should be: (1) identically cleaned on the test set,
+        and (2) should not be identified on the test set (to ensure both the
+        training and test sets are homogenous in the feautre space). Due to the
+        fact that some procedures can reveal new deficiencies (described in
+        fit), we must explicitly pass if we are fitting within this method.
+
+        :param dataset: the dataset to clean
+        :type dataset: pandas dataframe
+        :param labels: associated labels
+        :type labels: numpy array
+        :return: cleaned dataset and labels
+        :rtype: tuple containing a pandas dataframe and numpy array
+        """
+
+        # only identify columns to remove in non-test partitions
+        org_shape = dataset.shape
+        if fit:
+
+            # test 1: removing invalid values from min(rows, cols)
+            print(f"Scanning {dataset.size} values for invalids...")
+            dataset.replace(self.unknowns, None, inplace=True)
+            na_locs = dataset.isna()
+            na_rows = na_locs.any(axis=1).sum() / org_shape[0]
+            na_cols = na_locs.any(axis=0).sum() / org_shape[1]
+            print(
+                f"{na_rows:0.1%} of samples and {na_cols:0.1%}",
+                "of features have invalid values. Dropping the minimum...",
+            )
+            na_col_names = dataset.columns[na_locs.any()]
+            dataset.dropna(axis=1 if na_cols < na_rows else 0, inplace=True)
+            self.rm_features = set(na_col_names if na_cols < na_rows else [])
+
+            # test 2: identical column removal
+            print(f"Scanning {dataset.shape[1]} features for duplicates...")
+            dup_features = dataset.columns[dataset.T.duplicated()]
+            print(f"Dropping {len(dup_features)} duplicate features...")
+            dataset.drop(columns=dup_features, inplace=True)
+            self.rm_features.union(dup_features)
+        else:
+
+            # test 1, 2 & 4: drop features dropped in non-test partitions
+            print(f"Dropping {len(self.rm_features)} features from test set...")
+            dataset.drop(columns=self.rm_features, inplace=True)
+
+            # test ≈1: remove invalid values from rows only for test set
+            print(f"Scanning {dataset.size} values for invalids...")
+            dataset.replace(self.unknowns, None, inplace=True)
+            na_rows = dataset.isna().any(axis=1).sum()
+            print(f"Dropping {na_rows} samples with invalid values...")
+            dataset.dropna(axis=0, inplace=True)
+
+        # test 3: identical row removal (also remove from labels)
+        print(f"Scanning {dataset.shape[0]} samples for duplicates...")
+        dup_samples = dataset.duplicated()
+        print(f"Dropping {dup_samples.sum()} duplicate samples...")
+        dataset.drop(index=dataset.index[dup_samples], inplace=True)
+        labels = labels[~dup_samples]
+        if fit:
+
+            # test 4: single-value column removal
+            print(f"Scanning {dataset.shape[1]} features for single values...")
+            single_features = dataset.columns[dataset.nunique() == 1]
+            print(f"Dropping {len(single_features)} single-valued features...")
+            dataset.drop(columns=single_features, inplace=True)
+            self.rm_features.union(single_features)
+        return dataset, labels
 
 
 class Transformer:
     """
-    This transformer class servs as an intelligent wrapper for scikit-learn's
+    This Transformer class servs as an intelligent wrapper for scikit-learn's
     data transformation functions. Notably, the transformers (and
     ColumnTransformer compositions) do not implicitly preserve the order of
     features post-transformation. This class enables arbitrary data
@@ -35,7 +152,7 @@ class Transformer:
 
     def __init__(self, features, labels, schemes):
         """
-        This function initializes Transformer objects with the necessary
+        This method initializes Transformer objects with the necessary
         information to apply arbitrary transformations to data. Specifically,
         the manipulated features are expected to be tuple of tuples, wherein
         the number of datasets is the product of the lengths of the tuples.
@@ -60,6 +177,7 @@ class Transformer:
         self.labels = labels
 
         # instantiate transformers to support transforms for test set
+        self.ds = Destupefier()
         self.le = sklearn.preprocessing.LabelEncoder()
         self.ohe = sklearn.preprocessing.OneHotEncoder(sparse=False)
         self.mms = sklearn.preprocessing.MinMaxScaler()
@@ -95,7 +213,7 @@ class Transformer:
         untransformed_feat = list(set(self.feature_names).difference(*self.features))
         if untransformed_feat:
             self.features.append(untransformed_feat)
-            self.schemes.append(Transformer.raw)
+            self.schemes.append(sklearn.preprocessing.FunctionTransformer)
             print(
                 "The following features will be passed through:",
                 ", ".join(untransformed_feat),
@@ -128,7 +246,7 @@ class Transformer:
         most appropriate.
 
         :return: the transformed datasets
-        :rtype: generator of pandas dataframes
+        :rtype: generator of tuples of pandas dataframes & numpy arrays
         """
         for feature_list, scheme_list, transform_list in zip(
             itertools.repeat(self.features),
@@ -152,7 +270,7 @@ class Transformer:
 
             # convert to pandas dataframe, set header, print shape, and yield
             print(
-                {"×".join([s.__name for s in scheme_list])},
+                "×".join([s.__name__ for s in scheme_list]),
                 "assembled. Creating dataframe...",
             )
             dataset = pandas.DataFrame(list(zip(*dataset)), columns=self.feature_names)
@@ -162,39 +280,27 @@ class Transformer:
             for labels in self.label_transforms:
                 yield dataset, labels
 
-    def destupefy(self, train, test=None):
+    def destupefy(self, data, labels, fit):
         """
-        This method attempts to clean datasets after they have been processed.
-        At this time, destupefy performs the following:
+        This method serves as a simple wrapper for Destupefier objects.
 
-            - Removes any single-value columns
-            - Removes any identical rows
-
-        Note, this method is experimental.
-
-        :param dataset: the dataset to cleanse
-        :type dataset: pandas dataframe
-        :return: the cleaned datasets
-        :rtype: pandas dataframe
+        :param data: the dataset to clean
+        :type data: pandas dataframe
+        :param labels: associated labels
+        :type labels: numpy array
+        :return: cleaned dataset and labels
+        :rtype: tuple containing a pandas dataframe and numpy array
         """
-
-        # doing this indepedently is unsafe; for now, fit to training data only
-        print("Analyzing dataset for single-value columns...")
-        tr_os, tr_of = train.shape
-        _, te_of = test.shape if test is not None else None, None
-        single_cols = train.columns[train.nunique() > 1]
-        train = train[single_cols]
-        test = test[single_cols] if test is not None else None
-
-        # dropping duplicates can be done safely for both traing and testing
-        print(f"Dropped {train.shape[1]-tr_os} features! Removing duplicate samples...")
-        train = train.drop_duplicates()
-        print(f"Dropped {train.shape[0]-tr_of} samples! (New shape: {train.shape})")
-        test = test.drop_duplicates() if test is not None else None
+        print(f"Applying destupefication to data of shape {data.shape}...")
+        org_shape = data.shape
+        data, lables = self.ds.transform(data, labels, fit)
         print(
-            f"Dropped {test.shape[0]-te_of} test samples! (New shape: {test.shape})"
-        ) if test is not None else None
-        return train, test
+            "Destupefication complete!",
+            f"Dropped {org_shape[0] - data.shape[0]}",
+            f"samples and {org_shape[1] - data.shape[1]} features.",
+            f"New shape: {data.shape}",
+        )
+        return data, labels
 
     def labelencoder(self, labels, fit):
         """
@@ -209,7 +315,7 @@ class Transformer:
         """
         print(f"Applying label encoding to {labels.size} samples...")
         data = self.le.fit_transform(labels) if fit else self.le.transform(labels)
-        print(f"Transformed {', '.join(self.le.classes_)} to integers.")
+        print(f"Encoded {', '.join(self.le.classes_)} as integers.")
         return data
 
     def minmaxscaler(self, data, fit):
@@ -247,21 +353,6 @@ class Transformer:
         for idx, ohot_feat in enumerate(self.ohe.feature_names_in_):
             org_idx = self.feature_names.index(ohot_feat)
             self.feature_names[org_idx : org_idx + 1] = self.ohe.categories_[idx]
-        return data
-
-    def raw(self, data, fit):
-        """
-        This method serves as a transformation no-op; the data is returned
-        as-is.
-
-        :param data: the data to transform
-        :type data: pandas dataframe
-        :param fit: whether the transformer should fit before transforming
-        :type fit: bool
-        :return: transformed data
-        :rtype: numpy array
-        """
-        print(f"Apply raw scaling (no-op) to data of shape {data.shape}...")
         return data
 
     def robustscaler(self, data, fit):
