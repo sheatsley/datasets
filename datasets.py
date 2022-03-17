@@ -98,15 +98,18 @@ def main(
         transformer.apply(*dataset[part].values(), part != "test")
 
         # assemble the transformations (and restore feature names)
-        for transformed_data, transformed_labels, name in zip(
+        for (transformed_data, transformed_labels), name in zip(
             transformer.export(), names
         ):
 
             # if applicable, destupefy
-            transformed_data = (
-                transformer.destupefy(transformed_data)
+            transformed_data, transformed_labels = (
+                transformer.destupefy(
+                    transformed_data, transformed_labels, part != "test"
+                )
                 if destupefy
-                else transformed_data
+                else transformed_data,
+                transformed_labels,
             )
 
             # save (with analytics, if desired)
