@@ -13,6 +13,7 @@ from utilities import print  # Timestamped printing
 # TODO
 # add unit tests
 # augment tensorflow parser to include structured data (generalize image key)
+# convert dataset definitions from strings to callables
 
 
 class Downloader:
