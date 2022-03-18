@@ -88,7 +88,7 @@ def main(
     print("Instantiating Transformer & applying transformations...")
     parts = (
         (["train", "test"] + [p for p in dataset if p not in {"train", "test"}])
-        if all(p in {"train", "test"} for p in dataset)
+        if all(p in dataset for p in {"train", "test"})
         else list(dataset)
     )
     transformer = transform.Transformer(features, labels, schemes)
@@ -116,6 +116,7 @@ def main(
             save.write(
                 transformed_data,
                 transformed_labels,
+                part,
                 name,
                 precision=precision,
                 analytics=analytics,
