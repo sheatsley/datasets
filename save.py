@@ -3,9 +3,11 @@ The save module writes (and reads) transformed machine learning datasets.
 Author: Ryan Sheatsley
 Wed Mar 2 2022
 """
+import collections  # Container datatypes
 import numpy as np  # The fundamental package for scientific computing with Python
 import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
+import pickle  # Python object serilization
 from utilities import print  # Timestamped printing
 
 # TODO
@@ -14,38 +16,52 @@ from utilities import print  # Timestamped printing
 # compute pearson correlation matricies
 
 
+def tupalize(x, y, **metadata):
+    """
+    This function populates namedtuples with data & labels, as well as any
+    desired metadata.
+
+    :param x: data samples
+    :type x: numpy array
+    :param y: labels
+    :type y: numpy array
+    :param metadata: metadata to be stored
+    :type metadata: dictionary
+    :return: complete dataset with metadata
+    :rtype: namedtuple object
+    """
+    return None
+
+
 def analyze(training, testing=None):
     """ """
     return None
 
 
 def write(
-    train_data,
-    train_labels,
-    test_data,
-    test_labels,
+    dataframe,
+    labels,
+    part,
     name,
     precision=np.float32,
     analytics=False,
     outdir=pathlib.Path("out/"),
 ):
     """
-    This function is the main exit point from the datasets repo. It consumes
-    training and testing (if applicable) data and labels, casts them into numpy
-    arrays (with precision no greater than specified), concatenates labels as
-    the last column, and writes to disk with the specified filename and output
-    directory. Optionally, analytics are computed and saved in the same
-    directory.
+    This function is the main exit point from the datasets repo. It consumes a
+    dataset and labels, casts them into numpy arrays (with precision no greater
+    than specified), instantiates & populates a dataset object, and writes a
+    namedtuple object containing data & metadata to disk with the specified
+    filename and output directory. Optionally, analytics are computed and saved
+    in the same directory.
 
-    :param train_data: training data
-    :type train_data: pandas dataframe
-    :param train_labels: training labels
-    :type train_labels: pandas series
-    :param test_data: testing data
-    :type test_data: pandas dataframe
-    :param test_labels: testing labels
-    :type test_labels: pandas series
-    :param name: filename of dataset ("train" & "test" are appended, if applicable)
+    :param dataframe: dataset
+    :type dataframe: pandas dataframe
+    :param labels: labels
+    :type labels: pandas series
+    :param part: dataset partition type
+    :type part: str
+    :param name: filename of dataset (dataset partition type will be appended)
     :type name: str
     :param precision: maximum dataset precision
     :type precision: numpy type
@@ -57,28 +73,27 @@ def write(
     :rtype: NoneType
     """
 
-    # concatenate labels & convert to numpy arrays
+    # convert to numpy arrays
     print(f"Assembling {name} and converting to (max) {precision} numpy arrays...")
-    training = pandas.concat((train_data, train_labels), axis=1)
-    testing = pandas.concat((test_data, test_labels), axis=1) if test_data else None
-    training = training.to_numpy()
-    testing = testing.to_numpy() if testing else None
+    data = dataframe.to_numpy()
+    labels = labels.to_numpy()
     precision = (
         precision
-        if np.finfo(precision).precision < np.finfo(training.dtype).precision
-        else training.dtype
+        if np.finfo(precision).precision < np.finfo(data.dtype).precision
+        else data.dtype
     )
-    print(
-        f"Dropping precision to {precision}..."
-    ) if precision != training.dtype else None
-    training = np.astype(training, precision)
-    testing = np.astype(testing, precision) if testing else None
+
+    # set maximum precision (label precision is set based on the number of classes)
+    print(f"Setting precision to {precision}...")
+    data = np.astype(data, precision)
+
+    # populate a dataset object
+    print("Populating dataset object...")
+    dataset = Dataset(data, labels)
 
     # save the results to disk
-    print(f"Writing {name + '_training' if test_data else ''} to {outdir}...")
+    print(f"Writing {name + '-' + part} to {outdir}...")
     np.save(outdir / (name + "_training" if test_data else ""), training)
-    print(f"Writing {name + '_testing'} to {outdir}..." if test_data else None)
-    np.save(outdir / (name + "_testing"), test_data) if test_data else None
 
     # compute analyitcs if desired
     analyze(training, testing) if analytics else None
