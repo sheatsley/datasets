@@ -4,10 +4,10 @@ Author: Ryan Sheatsley
 Wed Mar 2 2022
 """
 import collections  # Container datatypes
+import dill as pickle  # serialize all of python
 import numpy as np  # The fundamental package for scientific computing with Python
 import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
-import pickle  # Python object serilization
 from utilities import print  # Timestamped printing
 
 # TODO
@@ -16,7 +16,7 @@ from utilities import print  # Timestamped printing
 # compute pearson correlation matricies
 
 
-def tupalize(x, y, **metadata):
+def assemble(x, y, metadata={}):
     """
     This function populates namedtuples with data & labels, as well as any
     desired metadata.
@@ -30,19 +30,32 @@ def tupalize(x, y, **metadata):
     :return: complete dataset with metadata
     :rtype: namedtuple object
     """
-    return None
+    return collections.namedtuple("Dataset", ["data", "labels", *metadata])(
+        x, y, **metadata
+    )
 
 
-def analyze(training, testing=None):
-    """ """
+def analyze(dataframe, labels, name, outdir):
+    """
+    :param dataframe: dataset
+    :type dataframe: pandas dataframe
+    :param labels: labels
+    :type labels: pandas series
+    :param name: filename of dataset (and partition)
+    :type name: str
+    :param outdir: output directory
+    :type outdir: pathlib path
+    :return: None
+    :rtype: NoneType
+    """
     return None
 
 
 def write(
     dataframe,
     labels,
-    part,
     name,
+    metadata={},
     precision=np.float32,
     analytics=False,
     outdir=pathlib.Path("out/"),
@@ -59,10 +72,10 @@ def write(
     :type dataframe: pandas dataframe
     :param labels: labels
     :type labels: pandas series
-    :param part: dataset partition type
-    :type part: str
-    :param name: filename of dataset (dataset partition type will be appended)
+    :param name: filename of dataset (and partition)
     :type name: str
+    :param metadata: metadata to be saved alongside the dataset
+    :type metadata: dict of various datatypes
     :param precision: maximum dataset precision
     :type precision: numpy type
     :param analytics: whether to compute and save dataset analytics
@@ -73,30 +86,38 @@ def write(
     :rtype: NoneType
     """
 
-    # convert to numpy arrays
+    # convert to numpy arrays & check if numerical casting is possible (ie not strings)
     print(f"Assembling {name} and converting to (max) {precision} numpy arrays...")
     data = dataframe.to_numpy()
     labels = labels.to_numpy()
-    precision = (
+    data_precision = (
         precision
-        if np.finfo(precision).precision < np.finfo(data.dtype).precision
+        if issubclass(data.dtype, np.floating)
+        and np.finfo(precision).precision < np.finfo(data.dtype).precision
         else data.dtype
+    )
+    label_precision = next(
+        precision
+        for precision in (np.int8, np.int16, np.int32, np.int64, labels.dtype)
+        if all(np.can_cast(label, precision) for label in np.unique(labels))
     )
 
     # set maximum precision (label precision is set based on the number of classes)
-    print(f"Setting precision to {precision}...")
-    data = np.astype(data, precision)
+    print(f"Casting data to {data_precision} and labels to {label_precision}...")
+    data.astype(data_precision, copy=False)
+    labels.astype(label_precision, copy=False)
 
     # populate a dataset object
     print("Populating dataset object...")
-    dataset = Dataset(data, labels)
+    dataset = assemble(data, labels, metadata)
 
     # save the results to disk
-    print(f"Writing {name + '-' + part} to {outdir}...")
-    np.save(outdir / (name + "_training" if test_data else ""), training)
+    print(f"Pickling dataset & writing {name} to {outdir}...")
+    with open(outdir / name, "wb") as f:
+        pickle.dump(dataset, f)
 
     # compute analyitcs if desired
-    analyze(training, testing) if analytics else None
+    analyze(dataframe, labels, name, outdir) if analytics else None
     return None
 
 
