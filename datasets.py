@@ -112,12 +112,18 @@ def main(
                 transformed_labels,
             )
 
+            # read any relevant metadata
+            metadata = {
+                **transformer.metadata(),
+                **{"orginal_shape": dataset.get("oshape", transformed_data.shape[1])},
+            }
+
             # save (with analytics, if desired)
             save.write(
                 transformed_data,
                 transformed_labels,
-                part,
-                name,
+                name + "-" + part,
+                metadata,
                 precision=precision,
                 analytics=analytics,
                 outdir=outdir,
