@@ -253,6 +253,7 @@ class Transformer:
             itertools.product(*self.schemes),
             itertools.product(*self.data_transforms),
         ):
+
             # assemble the dataframe in the original order
             print(f"Exporting {'×'.join([s.__name__ for s in scheme_list])}...")
             dataset = len(self.feature_names) * [None]
@@ -317,6 +318,34 @@ class Transformer:
         data = self.le.fit_transform(labels) if fit else self.le.transform(labels)
         print(f"Encoded {', '.join(self.le.classes_)} as integers.")
         return data
+
+    def metadata(self):
+        """
+        This method prepares any metadata extracted during the data
+        transformation process. At this time, the following attributes are considered
+        metadata:
+
+            (1) feature names (from self.feature_names)
+            (2) class mappings (from self.le.classes_)
+            (3) one-hot encoding maps (from self.ohe.categories_)
+
+        :return: any relevant metadata
+        :rtype: dict of various datatypes
+        """
+        print("Reading transformer metadata...")
+        metadata = {"feature_names": self.feature_names}
+        if hasattr(self.le, "classes_"):
+            metadata["class_map"] = {
+                new: old for new, old in enumerate(self.le.classes_)
+            }
+        if hasattr(self.ohe, "categories_"):
+            metadata["onehot_map"] = {
+                feature: values.tolist()
+                for feature, values in zip(
+                    self.ohe.feature_names_in_, self.ohe.categories_
+                )
+            }
+        return metadata
 
     def minmaxscaler(self, data, fit):
         """
