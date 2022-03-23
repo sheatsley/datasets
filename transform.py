@@ -70,7 +70,7 @@ class Destupefier(sklearn.base.TransformerMixin):
         :param dataset: the dataset to clean
         :type dataset: pandas dataframe
         :param labels: associated labels
-        :type labels: numpy array
+        :type labels: pandas series
         :return: cleaned dataset and labels
         :rtype: tuple containing a pandas dataframe and numpy array
         """
@@ -117,7 +117,9 @@ class Destupefier(sklearn.base.TransformerMixin):
         dup_samples = dataset.duplicated()
         print(f"Dropping {dup_samples.sum()} duplicate samples...")
         dataset.drop(index=dataset.index[dup_samples], inplace=True)
-        labels = labels[~dup_samples]
+        dataset.reset_index(drop=True, inplace=True)
+        labels.drop(labels.index[dup_samples], inplace=True)
+        labels.reset_index(drop=True, inplace=True)
         if fit:
 
             # test 4: single-value column removal
@@ -246,7 +248,7 @@ class Transformer:
         most appropriate.
 
         :return: the transformed datasets
-        :rtype: generator of tuples of pandas dataframes & numpy arrays
+        :rtype: generator of tuples of pandas dataframes & series
         """
         for feature_list, scheme_list, transform_list in zip(
             itertools.repeat(self.features),
@@ -277,9 +279,9 @@ class Transformer:
             dataset = pandas.DataFrame(list(zip(*dataset)), columns=self.feature_names)
             print(f"Dataframe complete. Final shape: {dataset.shape}")
 
-            # yield with each label transformation
+            # yield with each label transformation (as a series)
             for labels in self.label_transforms:
-                yield dataset, labels
+                yield dataset, pandas.Series(labels)
 
     def destupefy(self, data, labels, fit):
         """
@@ -294,7 +296,7 @@ class Transformer:
         """
         print(f"Applying destupefication to data of shape {data.shape}...")
         org_shape = data.shape
-        data, lables = self.ds.transform(data, labels, fit)
+        data, labels = self.ds.transform(data, labels, fit)
         print(
             "Destupefication complete!",
             f"Dropped {org_shape[0] - data.shape[0]}",
