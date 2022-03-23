@@ -95,6 +95,7 @@ def main(
 
     # apply transformations to each parittion
     for part in parts:
+        print("Applying transformations to {dataset} {part} partition...")
         transformer.apply(*dataset[part].values(), part != "test")
 
         # assemble the transformations (and restore feature names)
@@ -108,8 +109,7 @@ def main(
                     transformed_data, transformed_labels, part != "test"
                 )
                 if destupefy
-                else transformed_data,
-                transformed_labels,
+                else (transformed_data, transformed_labels)
             )
 
             # read any relevant metadata
