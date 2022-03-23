@@ -3,57 +3,16 @@ The save module writes (and reads) transformed machine learning datasets.
 Author: Ryan Sheatsley
 Wed Mar 2 2022
 """
-import collections  # Container datatypes
 import dill as pickle  # serialize all of python
 import numpy as np  # The fundamental package for scientific computing with Python
-import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
+import utilities  # Miscellaneous helper functions
 from utilities import print  # Timestamped printing
-
-# TODO
-# save n_samples & features, n_classes, class breakdown, means & medians & stds
-# compute figures of feature distributions, class-color-coded
-# compute pearson correlation matricies
-
-
-def assemble(x, y, metadata={}):
-    """
-    This function populates namedtuples with data & labels, as well as any
-    desired metadata.
-
-    :param x: data samples
-    :type x: numpy array
-    :param y: labels
-    :type y: numpy array
-    :param metadata: metadata to be stored
-    :type metadata: dictionary
-    :return: complete dataset with metadata
-    :rtype: namedtuple object
-    """
-    return collections.namedtuple("Dataset", ["data", "labels", *metadata])(
-        x, y, **metadata
-    )
-
-
-def analyze(dataframe, labels, name, outdir):
-    """
-    :param dataframe: dataset
-    :type dataframe: pandas dataframe
-    :param labels: labels
-    :type labels: pandas series
-    :param name: filename of dataset (and partition)
-    :type name: str
-    :param outdir: output directory
-    :type outdir: pathlib path
-    :return: None
-    :rtype: NoneType
-    """
-    return None
 
 
 def write(
     dataframe,
-    labels,
+    labelframe,
     name,
     metadata={},
     precision=np.float32,
@@ -70,8 +29,8 @@ def write(
 
     :param dataframe: dataset
     :type dataframe: pandas dataframe
-    :param labels: labels
-    :type labels: pandas series
+    :param labelframe: labels
+    :type labelframe: pandas series
     :param name: filename of dataset (and partition)
     :type name: str
     :param metadata: metadata to be saved alongside the dataset
@@ -87,12 +46,12 @@ def write(
     """
 
     # convert to numpy arrays & check if numerical casting is possible (ie not strings)
-    print(f"Assembling {name} and converting to (max) {precision} numpy arrays...")
+    print(f"Assembling {name} and casting to (max) {precision.__name__} arrays...")
     data = dataframe.to_numpy()
-    labels = labels.to_numpy()
+    labels = labelframe.to_numpy()
     data_precision = (
         precision
-        if issubclass(data.dtype, np.floating)
+        if issubclass(data.dtype.type, np.floating)
         and np.finfo(precision).precision < np.finfo(data.dtype).precision
         else data.dtype
     )
@@ -103,21 +62,31 @@ def write(
     )
 
     # set maximum precision (label precision is set based on the number of classes)
-    print(f"Casting data to {data_precision} and labels to {label_precision}...")
+    print(
+        f"Casting data to {data_precision.__name__}",
+        f"and labels to {label_precision.__name__}...",
+    )
     data.astype(data_precision, copy=False)
     labels.astype(label_precision, copy=False)
 
     # populate a dataset object
     print("Populating dataset object...")
-    dataset = assemble(data, labels, metadata)
+    dataset = utilities.assemble(data, labels, metadata)
 
     # save the results to disk
     print(f"Pickling dataset & writing {name} to {outdir}...")
+    outdir.mkdir(parents=True, exist_ok=True)
     with open(outdir / name, "wb") as f:
         pickle.dump(dataset, f)
+    print(f"{name} saved to {outdir}!")
 
     # compute analyitcs if desired
-    analyze(dataframe, labels, name, outdir) if analytics else None
+    utilities.analyze(
+        dataframe,
+        labelframe.replace(metadata.get("class_map")),
+        name,
+        outdir,
+    ) if analytics else None
     return None
 
 
