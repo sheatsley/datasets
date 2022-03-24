@@ -6,7 +6,6 @@ resultant arrays to disk.
 Author: Ryan Sheatsley
 Mon Feb 28 2022
 """
-import itertools  # Functions creating iterators for efficient looping
 import retrieve  # Download machine learning datasets
 import save  # Save (and load) machine learning datasets quickly
 import transform  # Apply transformations to machine learning datasets
@@ -69,11 +68,11 @@ def main(
     # instantiate Downloader and download the dataset
     print(f"Instantiating Downloader & downloading {dataset}...")
     downloader = retrieve.Downloader(dataset)
-    dataset = downloader.download()
+    data = downloader.download()
 
     # extract features (needed for "all" keyword) from first data partition
-    part = next(iter(dataset))
-    feat_names = dataset[part]["data"].columns
+    part = next(iter(data))
+    feat_names = data[part]["data"].columns
     print(f"Inferred {len(feat_names)} features from {part} partition.")
 
     # resovle "all" keyword to feature names minus those used in one-hot encoding
@@ -87,16 +86,16 @@ def main(
     # ensure that training preceeds testing to ensure correct transformation fits
     print("Instantiating Transformer & applying transformations...")
     parts = (
-        (["train", "test"] + [p for p in dataset if p not in {"train", "test"}])
-        if all(p in dataset for p in {"train", "test"})
-        else list(dataset)
+        (["train", "test"] + [p for p in data if p not in {"train", "test"}])
+        if all(p in data for p in {"train", "test"})
+        else list(data)
     )
     transformer = transform.Transformer(features, labels, schemes)
 
     # apply transformations to each parittion
     for part in parts:
-        print("Applying transformations to {dataset} {part} partition...")
-        transformer.apply(*dataset[part].values(), part != "test")
+        print(f"Applying transformations to {dataset} {part} partition...")
+        transformer.apply(*data[part].values(), part != "test")
 
         # assemble the transformations (and restore feature names)
         for (transformed_data, transformed_labels), name in zip(
@@ -115,7 +114,7 @@ def main(
             # read any relevant metadata
             metadata = {
                 **transformer.metadata(),
-                **{"orginal_shape": dataset.get("oshape", transformed_data.shape[1])},
+                **{"orginal_shape": data.get("oshape", len(transformed_data.columns))},
             }
 
             # save (with analytics, if desired)
