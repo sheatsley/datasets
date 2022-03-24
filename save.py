@@ -66,8 +66,8 @@ def write(
         f"Casting data to {data_precision.__name__}",
         f"and labels to {label_precision.__name__}...",
     )
-    data.astype(data_precision, copy=False)
-    labels.astype(label_precision, copy=False)
+    data = data.astype(data_precision, copy=False)
+    labels = labels.astype(label_precision, copy=False)
 
     # populate a dataset object
     print("Populating dataset object...")
