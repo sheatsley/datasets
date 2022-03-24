@@ -76,15 +76,15 @@ class Destupefier(sklearn.base.TransformerMixin):
         """
 
         # only identify columns to remove in non-test partitions
-        org_shape = dataset.shape
+        org_rows, org_cols = dataset.shape
         if fit:
 
             # test 1: removing invalid values from min(rows, cols)
             print(f"Scanning {dataset.size} values for invalids...")
             dataset.replace(self.unknowns, None, inplace=True)
             na_locs = dataset.isna()
-            na_rows = na_locs.any(axis=1).sum() / org_shape[0]
-            na_cols = na_locs.any(axis=0).sum() / org_shape[1]
+            na_rows = na_locs.any(axis=1).sum() / org_rows
+            na_cols = na_locs.any(axis=0).sum() / org_cols
             print(
                 f"{na_rows:0.1%} of samples and {na_cols:0.1%}",
                 "of features have invalid values. Dropping the minimum...",
@@ -94,11 +94,11 @@ class Destupefier(sklearn.base.TransformerMixin):
             self.rm_features = set(na_col_names if na_cols < na_rows else [])
 
             # test 2: identical column removal
-            print(f"Scanning {dataset.shape[1]} features for duplicates...")
+            print(f"Scanning {len(dataset.columns)} features for duplicates...")
             dup_features = dataset.columns[dataset.T.duplicated()]
             print(f"Dropping {len(dup_features)} duplicate features...")
             dataset.drop(columns=dup_features, inplace=True)
-            self.rm_features.union(dup_features)
+            self.rm_features = self.rm_features.union(dup_features)
         else:
 
             # test 1, 2 & 4: drop features dropped in non-test partitions
@@ -113,7 +113,7 @@ class Destupefier(sklearn.base.TransformerMixin):
             dataset.dropna(axis=0, inplace=True)
 
         # test 3: identical row removal (also remove from labels)
-        print(f"Scanning {dataset.shape[0]} samples for duplicates...")
+        print(f"Scanning {len(dataset)} samples for duplicates...")
         dup_samples = dataset.duplicated()
         print(f"Dropping {dup_samples.sum()} duplicate samples...")
         dataset.drop(index=dataset.index[dup_samples], inplace=True)
@@ -123,11 +123,11 @@ class Destupefier(sklearn.base.TransformerMixin):
         if fit:
 
             # test 4: single-value column removal
-            print(f"Scanning {dataset.shape[1]} features for single values...")
+            print(f"Scanning {len(dataset.columns)} features for single values...")
             single_features = dataset.columns[dataset.nunique() == 1]
             print(f"Dropping {len(single_features)} single-valued features...")
             dataset.drop(columns=single_features, inplace=True)
-            self.rm_features.union(single_features)
+            self.rm_features = self.rm_features.union(single_features)
         return dataset, labels
 
 
@@ -211,11 +211,11 @@ class Transformer:
         self.label_transforms = []
 
         # save feature names for export later & pass untouched features to raw
-        self.feature_names = data.columns.tolist() if fit else self.feature_names
+        self.feature_names = data.columns.tolist()
         untransformed_feat = list(set(self.feature_names).difference(*self.features))
         if untransformed_feat:
             self.features.append(untransformed_feat)
-            self.schemes.append(sklearn.preprocessing.FunctionTransformer)
+            self.schemes.append([Transformer.identity])
             print(
                 "The following features will be passed through:",
                 ", ".join(untransformed_feat),
@@ -281,7 +281,7 @@ class Transformer:
 
             # yield with each label transformation (as a series)
             for labels in self.label_transforms:
-                yield dataset, pandas.Series(labels)
+                yield dataset, pandas.Series(labels, name="label")
 
     def destupefy(self, data, labels, fit):
         """
@@ -295,15 +295,30 @@ class Transformer:
         :rtype: tuple containing a pandas dataframe and numpy array
         """
         print(f"Applying destupefication to data of shape {data.shape}...")
-        org_shape = data.shape
+        org_rows, org_cols = data.shape
         data, labels = self.ds.transform(data, labels, fit)
         print(
             "Destupefication complete!",
-            f"Dropped {org_shape[0] - data.shape[0]}",
-            f"samples and {org_shape[1] - data.shape[1]} features.",
+            f"Dropped {org_rows - len(data.shape)}",
+            f"samples and {org_cols - len(data.columns)} features.",
             f"New shape: {data.shape}",
         )
         return data, labels
+
+    def identity(self, data, fit):
+        """
+        This method serves as an identity function, which is always used for
+        features that are passed through (i.e., not assocaited with a scheme).
+
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
+        :return: transformed data
+        :rtype: numpy array
+        """
+        print(f"Applying identity to data of shape {data.shape}...")
+        return data
 
     def labelencoder(self, labels, fit):
         """
