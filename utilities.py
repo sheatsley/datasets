@@ -84,9 +84,10 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
 
     # (2): compute pearson correlation matricies
     print(f"Computing Pearson correlations for dataframe of shape {dataframe.shape}...")
-    fig, ax = plt.subplots()
     fullframe = dataframe.join(labelframe.astype("category").cat.codes.rename("label"))
     correlations = fullframe.corr().round(2)
+    cols = len(fullframe.columns)
+    fig, ax = plt.subplots(figsize=(cols / 2, cols / 2))
     art = ax.matshow(correlations)
     ax.set_yticks(range(len(fullframe.columns)), labels=fullframe.columns)
     ax.set_xticks(range(len(fullframe.columns)), labels=fullframe.columns, rotation=45)
@@ -97,7 +98,7 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     # set title, add colorbar, and save
     print("Pearson correlations complete! Adding colorbar and saving...")
     ax.set_title(f"{name} Pearson Correlation Matrix")
-    fig.colorbar(art)
+    fig.colorbar(art, ax=ax)
     fig.tight_layout()
     fig.savefig(outdir / (name + "_correlation"), bbox_inches="tight")
     return None
