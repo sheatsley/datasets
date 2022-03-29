@@ -129,7 +129,7 @@ def main(
             # read any relevant metadata
             metadata = {
                 **transformer.metadata(),
-                **{"orginal_shape": data.get("oshape", len(transformed_data.columns))},
+                **{"original_shape": data.get("oshape", transformed_data.shape)},
             }
 
             # save (with analytics, if desired)
