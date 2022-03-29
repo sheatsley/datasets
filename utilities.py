@@ -7,6 +7,7 @@ import collections  # Container datatypes
 import builtins  # Built-in objects
 import itertools  # Functions creating iterators for efficient looping
 import matplotlib.pyplot as plt  # Visualization with Python
+import mpl_toolkits.axes_grid1  # Application-specific functions that extend Matplotlib
 import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
 import time  # Time access and conversions
@@ -89,16 +90,18 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     cols = len(fullframe.columns)
     fig, ax = plt.subplots(figsize=(cols / 2, cols / 2))
     art = ax.matshow(correlations)
-    ax.set_yticks(range(len(fullframe.columns)), labels=fullframe.columns)
-    ax.set_xticks(range(len(fullframe.columns)), labels=fullframe.columns, rotation=45)
-    for x, y in itertools.product(*itertools.tee(range(len(correlations)))):
-        print(f"{idx/len(dataframe.columns):.1%} - Analyzing {feature}...\r", end="")
+    ax.set_yticks(range(cols), labels=fullframe.columns)
+    ax.set_xticks(range(cols), labels=fullframe.columns, rotation=45)
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+    for x, y in itertools.product(*itertools.tee(range(cols))):
+        print(f"{x / cols:.1%} - Analyzing {fullframe.columns[x]}...\r", end="")
         ax.text(x, y, correlations.iloc[x, y], ha="center", va="center", color="w")
 
     # set title, add colorbar, and save
     print("Pearson correlations complete! Adding colorbar and saving...")
     ax.set_title(f"{name} Pearson Correlation Matrix")
-    fig.colorbar(art, ax=ax)
+    divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
+    fig.colorbar(art, cax=divider.append_axes("right", size="1%", pad=0.05))
     fig.tight_layout()
     fig.savefig(outdir / (name + "_correlation"), bbox_inches="tight")
     return None
