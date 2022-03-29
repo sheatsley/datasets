@@ -19,12 +19,32 @@ class Templates:
     Transformations for the following datasets are provided:
 
     (1) nslkdd (NSL-KDD): Network Intrusion Detection
+    (2) phishing (Phishing dataset): Phishing Detection
     """
 
     nslkdd = {
         "features": [["all"], ["protocol_type", "service", "flag"]],
         "labels": [transform.Transformer.labelencoder],
         "names": ["nslkdd"],
+        "schemes": [
+            [transform.Transformer.minmaxscaler],
+            [transform.Transformer.onehotencoder],
+        ],
+    }
+    phishing = {
+        "features": [
+            ["all"],
+            [
+                "SubdomainLevelRT",
+                "UrlLengthRT",
+                "PctExtResourceUrlsRT",
+                "AbnormalExtFormActionR",
+                "ExtMetaScriptLinkRT",
+                "PctExtNullSelfRedirectHyperlinksRT",
+            ],
+        ],
+        "labels": [transform.Transformer.labelencoder],
+        "names": ["phishing"],
         "schemes": [
             [transform.Transformer.minmaxscaler],
             [transform.Transformer.onehotencoder],
