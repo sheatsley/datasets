@@ -299,7 +299,7 @@ class Transformer:
         data, labels = self.ds.transform(data, labels, fit)
         print(
             "Destupefication complete!",
-            f"Dropped {org_rows - len(data.shape)}",
+            f"Dropped {org_rows - len(data)}",
             f"samples and {org_cols - len(data.columns)} features.",
             f"New shape: {data.shape}",
         )
@@ -394,6 +394,17 @@ class Transformer:
         print(f"Applying one-hot encoding to data of shape {data.shape}...")
         data = self.ohe.fit_transform(data) if fit else self.ohe.transform(data)
         print(f"Encoding shape expanded to {data.shape}.")
+
+        # if categories are ints or floats, apply feature_names_out
+        slices = list(itertools.accumulate(map(len, self.ohe.categories_))) + [0]
+        for idx, new_feat in enumerate(self.ohe.categories_):
+            try:
+                new_feat.astype(float)
+                self.ohe.categories_[idx] = self.ohe.get_feature_names_out()[
+                    slices[idx - 1] : slices[idx]
+                ]
+            except ValueError:
+                pass
 
         # ensure feature_names reflects the expanded space
         for idx, ohot_feat in enumerate(self.ohe.feature_names_in_):
