@@ -7,6 +7,7 @@ import argparse  # Parser for command-line options, arguments and sub-commands
 import itertools  # Functions creating iterators for efficient looping¶
 import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
+import templates  # Predefined dataset transformations
 import transform  # Order-preserving transformations for machine learning data
 from utilities import print  # Timestamped printing
 
@@ -43,7 +44,6 @@ def parse_args():
     p.add_argument(
         "-l",
         "--labels",
-        # action="append",
         default=[],
         help="label manipulation scheme(s) to apply",
         nargs="*",
@@ -92,6 +92,12 @@ def parse_args():
         help="cleanup datasets automagically (experimental)",
     )
     p.add_argument(
+        "-t",
+        "--template",
+        action="store_true",
+        help="apply predefined transformations",
+    )
+    p.add_argument(
         "--version",
         action="version",
         help="displays module version",
@@ -121,8 +127,14 @@ def validate_args():
     :rtype: dictionary; keys are arguments and values are entries
     """
 
-    # extract command-line args, correct dataset names, & run assertions
+    # extract command-line args and override if template is set
     args = parse_args()
+    args.__dict__.update(
+        getattr(templates.Templates, args.dataset)
+    ) if args.template else None
+    del args.template
+
+    # correct dataset names, & run assertions
     datasets = list(itertools.product(*args.schemes, args.labels))
     args.names = (
         args.names
