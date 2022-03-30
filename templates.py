@@ -20,6 +20,7 @@ class Templates:
 
     (1) nslkdd (NSL-KDD): Network Intrusion Detection
     (2) phishing (Phishing dataset): Phishing Detection
+    (3) unswnb15 (UNSW-NB15): Network Intrusion Detection
     """
 
     nslkdd = {
@@ -45,6 +46,18 @@ class Templates:
         ],
         "labels": [transform.Transformer.labelencoder],
         "names": ["phishing"],
+        "schemes": [
+            [transform.Transformer.minmaxscaler],
+            [transform.Transformer.onehotencoder],
+        ],
+    }
+    unswnb15 = {
+        "features": [
+            ["all"],
+            ["proto", "service", "state"],
+        ],
+        "labels": [transform.Transformer.labelencoder],
+        "names": ["unswnb15"],
         "schemes": [
             [transform.Transformer.minmaxscaler],
             [transform.Transformer.onehotencoder],
