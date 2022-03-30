@@ -113,7 +113,7 @@ def main(
         transformer.apply(*data[part].values(), part != "test")
 
         # assemble the transformations (and restore feature names)
-        for (transformed_data, transformed_labels), name in zip(
+        for (transformed_data, transformed_labels, transformations), name in zip(
             transformer.export(), names
         ):
 
@@ -130,13 +130,14 @@ def main(
             metadata = {
                 **transformer.metadata(),
                 **{"original_shape": data.get("oshape", transformed_data.shape)},
+                **{"transformations": transformations},
             }
 
             # save (with analytics, if desired)
             save.write(
                 transformed_data,
                 transformed_labels,
-                name + "-" + part,
+                f"{name}-{part}",
                 metadata,
                 precision=precision,
                 analytics=analytics,
