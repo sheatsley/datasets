@@ -35,12 +35,12 @@ def read(dataset, outdir=pathlib.Path("out/")):
     # check if a partition is specified
     print(f"Loading {dataset} from {outdir}...")
     data, part = split if len(split := dataset.rsplit("-", 1)) == 2 else (dataset, None)
-    partitions = set(outdir.glob(dataset + "*.pkl"))
+    partitions = set(outdir.glob(f"{dataset}*.pkl"))
     part_stems = [p.stem.rsplit("-")[1] for p in partitions]
 
     # case 1: the partition is specified
     if part and part != "all":
-        with open(outdir / (dataset + ".pkl"), "rb") as f:
+        with open(outdir / f"{dataset}.pkl", "rb") as f:
             return dill.load(f)
 
     # case 2: the partition is "all"
@@ -62,12 +62,12 @@ def read(dataset, outdir=pathlib.Path("out/")):
         datasets = []
         for part in ("train", "test"):
             print(f"Loading {part} partition...")
-            with open(outdir / ("-".join([dataset, part]) + ".pkl"), "rb") as f:
+            with open(outdir / (f"{'-'.join([dataset, part])}.pkl"), "rb") as f:
                 datasets.append(dill.load(f))
         return collections.namedtuple("Dataset", ("train", "test"))(*datasets)
 
     # case 5: dataset does not exist
-    raise FileNotFoundError(outdir / ("-".join((data, "*.pkl"))))
+    raise FileNotFoundError(outdir / "-".join((data, "*.pkl")))
 
 
 def write(
@@ -136,7 +136,7 @@ def write(
     # save the results to disk
     print(f"Pickling dataset & writing {name} to {outdir}...")
     outdir.mkdir(parents=True, exist_ok=True)
-    with open(outdir / (name + ".pkl"), "wb") as f:
+    with open(outdir / f"{name}.pkl", "wb") as f:
         dill.dump(dataset, f)
     print(f"{name} saved to {outdir}!")
 
