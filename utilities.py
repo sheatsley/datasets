@@ -18,7 +18,8 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     This function analyzes a dataframe to produce various statisitcs of the
     underlying data. Specifically, this computes (1) feature histograms,
     color-coded based on the underlying class, (2) pearson correlation
-    matricies, and (3) class membership statistics.
+    matricies, (3) class membership statistics, and (4) basic dataset
+    statisics.
 
     :param dataframe: dataset
     :type dataframe: pandas dataframe
@@ -62,7 +63,7 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
                 label=label,
             )
 
-    # (1): add legend in the last subplot
+    # (1) & (2): add legend in the last subplot (with class statistics)
     print("Histograms complete! Adding legend and saving...")
     handles, labels = axes.flat[idx].get_legend_handles_labels()
     labels = [f"{c} - {r:.2%}" for c, r in zip(sorted_classes, class_ratios)]
@@ -77,13 +78,13 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
         title=f"{name} Class Distribution",
     )
 
-    # (1): remove axes from remaining plots, cleanup appearance, and save
+    # (1) & (2): remove axes from remaining plots, cleanup appearance, and save
     for idx in range(idx + 1, len(axes.flat)):
         axes.flat[idx].set_axis_off()
     fig.tight_layout()
-    fig.savefig(outdir / (name + "_histograms"), bbox_inches="tight")
+    fig.savefig(outdir / f"{name}_histograms", bbox_inches="tight")
 
-    # (2): compute pearson correlation matricies
+    # (3): compute pearson correlation matricies
     print(f"Computing Pearson correlations for dataframe of shape {dataframe.shape}...")
     fullframe = dataframe.join(labelframe.astype("category").cat.codes.rename("label"))
     correlations = fullframe.corr().round(2)
@@ -97,13 +98,42 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
         print(f"{x / cols:.1%} - Analyzing {fullframe.columns[x]}...\r", end="")
         ax.text(x, y, correlations.iloc[x, y], ha="center", va="center", color="w")
 
-    # set title, add colorbar, and save
+    # (3) set title, add colorbar, and save
     print("Pearson correlations complete! Adding colorbar and saving...")
     ax.set_title(f"{name} Pearson Correlation Matrix")
     divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
     fig.colorbar(art, cax=divider.append_axes("right", size="1%", pad=0.05))
     fig.tight_layout()
-    fig.savefig(outdir / (name + "_correlation"), bbox_inches="tight")
+    fig.savefig(outdir / f"{name}_correlation", bbox_inches="tight")
+
+    # (4) compute basic dataset statistics
+    print("Computing dataset statistics...")
+    statsframe = dataframe.describe().T.round(3)
+    statsframe.drop(columns="count", inplace=True)
+
+    # (4) configure table and save
+    print("Statistics computed! Configuring table and saving...")
+    feat_nums = [f"{f}: {i}" for i, f in enumerate(statsframe.index)]
+    cell_col = np.array(
+        [
+            ["snow" if i % 2 else "lightsteelblue"] * len(statsframe.columns)
+            for i in range(len(statsframe))
+        ]
+    )
+    fig, ax = plt.subplots(figsize=(10, len(statsframe) // 5))
+    ax.axis("off")
+    ax.table(
+        cellText=statsframe.values,
+        colLabels=statsframe.columns,
+        rowLabels=feat_nums,
+        rowLoc="right",
+        cellLoc="center",
+        cellColours=cell_col,
+        rowColours=cell_col[:, 0],
+        loc="center",
+    )
+    fig.tight_layout()
+    fig.savefig(outdir / f"{name}_statistics", bbox_inches="tight")
     return None
 
 
