@@ -4,10 +4,8 @@ Author: Ryan Sheatsley
 Tue Mar 29 2022
 """
 from adapters import baseadapter  # Base Adapter class for custom datasets
-import io  # Core tools for working with streams
 import pandas  # Python Data Analysis Library
 from utilities import print  # Timestamped printing
-import zipfile  # Work with ZIP archives
 
 
 class Phishing(baseadapter.BaseAdapter):
@@ -24,7 +22,7 @@ class Phishing(baseadapter.BaseAdapter):
     :func:`preprocess`: resolves any dataset particulars
     :func:`read`: ensures the dataset conforms to the required standard
 
-    Finally, since the Phishing dataset is avaiable as ARFF, feature names are
+    Finally, since the Phishing dataset is avaiable via ARFF, feature names are
     extracted and made available for applying feature-specific transformations
     by name (as opposed to exclusively by index).
     """
@@ -50,10 +48,10 @@ class Phishing(baseadapter.BaseAdapter):
 
     def preprocess(self, data):
         """
-        Conforming to the BaseAdapter guidelines, we: (1) unzip the desired
-        files for the NSL-KDD,  and (2) apply the desired transformations
-        (i.e., dropping the last "difficulty" column and applying the label
-        transformation defined above to the second-to-last "attack" column).
+        Conforming to the BaseAdapter guidelines, we: (1) read the dataset
+        as-is (no unpacking necessary), and (2) use the data as-is (no
+        transformations are necessary, beyond reading the feature names and
+        setting the column header to such).
 
         :param data: the current dataset file
         :type data: bytes
@@ -66,7 +64,7 @@ class Phishing(baseadapter.BaseAdapter):
         datafile = data.decode().splitlines()
         features = [line.split()[1] for line in datafile[2:51]]
         df = pandas.DataFrame([x.split(",") for x in datafile[53:]], columns=features)
-        yield df
+        return df
 
     def read(self):
         """
@@ -104,7 +102,7 @@ if __name__ == "__main__":
     the root directory of the machine learning datasets repo as a module, such
     as:
 
-                            python3 -m adapters.nslkdd
+                            python3 -m adapters.phishing
     """
     dataset = Phishing().read()
     print(
