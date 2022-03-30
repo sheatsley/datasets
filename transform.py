@@ -257,7 +257,8 @@ class Transformer:
         ):
 
             # assemble the dataframe in the original order
-            print(f"Exporting {'×'.join([s.__name__ for s in scheme_list])}...")
+            scheme_names = [s.__name__ for s in scheme_list]
+            print(f"Exporting {'×'.join(scheme_names)}...")
             dataset = len(self.feature_names) * [None]
             for features, scheme, transform in zip(
                 feature_list, scheme_list, transform_list
@@ -272,16 +273,15 @@ class Transformer:
                     dataset[self.feature_names.index(feature)] = values
 
             # convert to pandas dataframe, set header, print shape, and yield
-            print(
-                "×".join([s.__name__ for s in scheme_list]),
-                "assembled. Creating dataframe...",
-            )
+            print("×".join(scheme_names), "assembled. Creating dataframe...")
             dataset = pandas.DataFrame(list(zip(*dataset)), columns=self.feature_names)
             print(f"Dataframe complete. Final shape: {dataset.shape}")
 
             # yield with each label transformation (as a series)
-            for labels in self.label_transforms:
-                yield dataset, pandas.Series(labels, name="label")
+            for labels, label_scheme in zip(self.label_transforms, self.labels):
+                yield dataset, pandas.Series(labels, name="label"), scheme_names + [
+                    label_scheme.__name__
+                ]
 
     def destupefy(self, data, labels, fit):
         """
@@ -396,15 +396,15 @@ class Transformer:
         print(f"Encoding shape expanded to {data.shape}.")
 
         # if categories are ints or floats, apply feature_names_out
-        slices = list(itertools.accumulate(map(len, self.ohe.categories_))) + [0]
+        bounds = list(itertools.accumulate(map(len, self.ohe.categories_)))
+        slices = [(start, end) for start, end in zip([0] + bounds, bounds)]
+        org_feat = [self.ohe.get_feature_names_out()[slice(*s)] for s in slices]
         for idx, new_feat in enumerate(self.ohe.categories_):
-            try:
-                new_feat.astype(float)
-                self.ohe.categories_[idx] = self.ohe.get_feature_names_out()[
-                    slices[idx - 1] : slices[idx]
-                ]
-            except ValueError:
-                pass
+            self.ohe.categories_[idx] = (
+                org_feat[idx]
+                if new_feat[0].translate({45: "", 46: ""}).isdigit()
+                else self.ohe.categories_[idx]
+            )
 
         # ensure feature_names reflects the expanded space
         for idx, ohot_feat in enumerate(self.ohe.feature_names_in_):
