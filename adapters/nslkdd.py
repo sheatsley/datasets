@@ -24,7 +24,7 @@ class NSLKDD(baseadapter.BaseAdapter):
     :func:`preprocess`: resolves any dataset particulars
     :func:`read`: ensures the dataset conforms to the required standard
 
-    Finally, since the NSL-KDD is avaiable as ARFF, feature names are extracted
+    Finally, since the NSL-KDD is avaiable via ARFF, feature names are extracted
     and made available for applying feature-specific transformations by name
     (as opposed to exclusively by index).
     """
