@@ -18,11 +18,25 @@ class Templates:
     original dataset name. All attributes are defined within class namespace.
     Transformations for the following datasets are provided:
 
-    (1) nslkdd (NSL-KDD): Network Intrusion Detection
-    (2) phishing (Phishing dataset): Phishing Detection
-    (3) unswnb15 (UNSW-NB15): Network Intrusion Detection
+    (1) fashionmnist (Fashion-MNIST): Fashion Products Recognition
+    (2) mnist (MNIST): Handwritten Digit Recognition
+    (3) nslkdd (NSL-KDD): Network Intrusion Detection
+    (4) phishing (Phishing dataset): Phishing Detection
+    (5) unswnb15 (UNSW-NB15): Network Intrusion Detection
     """
 
+    fashionmnist = {
+        "features": [["all"]],
+        "labels": [transform.Transformer.identity],
+        "names": ["fmnist"],
+        "schemes": [[transform.Transformer.minmaxscaler]],
+    }
+    mnist = {
+        "features": [["all"]],
+        "labels": [transform.Transformer.identity],
+        "names": ["mnist"],
+        "schemes": [[transform.Transformer.minmaxscaler]],
+    }
     nslkdd = {
         "features": [["all"], ["protocol_type", "service", "flag"]],
         "labels": [transform.Transformer.labelencoder],
