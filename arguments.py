@@ -87,6 +87,7 @@ def parse_args():
         help="compute basic data analytics",
     )
     p.add_argument(
+        "-d",
         "--destupefy",
         action="store_true",
         help="cleanup datasets automagically (experimental)",
@@ -173,7 +174,7 @@ if __name__ == "__main__":
 
         $ mlds nslkdd -f duration count -f service --outdir datasets
             -n nslkdd_ss nslkdd_mms -s standardscaler minmaxscaler
-            -s onehotencoder -l labelencoder -a --destupefy
+            -s onehotencoder -l labelencoder -a -d
 
     This (1) downloads the NSL-KDD, (2) selects "duration" and "count" as one
     group and "service" as the second group, (3) specifies an alternative
