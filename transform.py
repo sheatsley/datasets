@@ -318,7 +318,7 @@ class Transformer:
         :rtype: numpy array
         """
         print(f"Applying identity to data of shape {data.shape}...")
-        return data
+        return data.to_numpy()
 
     def labelencoder(self, labels, fit):
         """
