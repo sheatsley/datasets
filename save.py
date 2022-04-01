@@ -134,11 +134,11 @@ def write(
     dataset = utilities.assemble(data, labels, metadata)
 
     # save the results to disk
-    print(f"Pickling dataset & writing {name} to {outdir}...")
+    print(f"Pickling dataset & writing {name}.pkl to {outdir}/...")
     outdir.mkdir(parents=True, exist_ok=True)
     with open(outdir / f"{name}.pkl", "wb") as f:
         dill.dump(dataset, f)
-    print(f"{name} saved to {outdir}!")
+    print(f"{name}.pkl saved to {outdir}/!")
 
     # compute analyitcs if desired
     utilities.analyze(
