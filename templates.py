@@ -18,12 +18,20 @@ class Templates:
     original dataset name. All attributes are defined within class namespace.
     Transformations for the following datasets are provided:
 
-    (1) fashionmnist (Fashion-MNIST): Fashion Products Recognition
-    (2) mnist (MNIST): Handwritten Digit Recognition
-    (3) nslkdd (NSL-KDD): Network Intrusion Detection
-    (4) phishing (Phishing dataset): Phishing Detection
-    (5) unswnb15 (UNSW-NB15): Network Intrusion Detection
+    (1) cicmalmem2022 (CIC-MalMem-2022): Malware Detection
+    (2) fashionmnist (Fashion-MNIST): Fashion Products Recognition
+    (3) mnist (MNIST): Handwritten Digit Recognition
+    (4) nslkdd (NSL-KDD): Network Intrusion Detection
+    (5) phishing (Phishing dataset): Phishing Detection
+    (6) unswnb15 (UNSW-NB15): Network Intrusion Detection
     """
+
+    cicmalmem2022 = {
+        "features": [["all"]],
+        "labels": [transform.Transformer.labelencoder],
+        "names": ["cicmalmem2022"],
+        "schemes": [[transform.Transformer.minmaxscaler]],
+    }
 
     fashionmnist = {
         "features": [["all"]],
