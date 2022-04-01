@@ -25,13 +25,14 @@ class Downloader:
 
     :func:`__init__`: instantiates Downloader objects
     :func:`adapter`: defines an interface for third-party dataset downloaders
+    :func:`prep`: prepares pytorch and tensorflow into usable pandas dataframes
     :func:`pytorch`: retrieve datasets from torchvision
     :func:`tensorflow`: retreive datasets from tensorflow
     """
 
     def __init__(self, dataset):
         """
-        This function initializes the supported datasets from PyTorch,
+        This method initializes the supported datasets from PyTorch,
         TensorFlow, and user-specified datasets as described in the custom.py
         module. Details pertaining to the libraries are described below.
 
@@ -474,7 +475,7 @@ class Downloader:
         }
         return None
 
-    def custom(self, dataset, directory="/tmp/"):
+    def adapter(self, dataset, directory="/tmp/"):
         """
         This method instantiates objects from the adapters package to retrieve
         datasets from arbitrary network resources. It relies on the request
@@ -492,7 +493,7 @@ class Downloader:
 
     def download(self):
         """
-        This function dispatches dataset downloads to the respective handlers.
+        This method dispatches dataset downloads to the respective handlers.
 
         :param dataset: dataset to download
         :type dataset: string
@@ -500,26 +501,49 @@ class Downloader:
         :rtype: dictionary; keys are dataset types & values are dataframes
         """
         if self.dataset in self.pytorch_datasets:
-            return self.pytorch(
-                self.pytorch_datasets[self.dataset]["name"],
-                *self.pytorch_datasets[self.dataset]["part"],
+            return self.prep(
+                self.pytorch(
+                    self.pytorch_datasets[self.dataset]["name"],
+                    *self.pytorch_datasets[self.dataset]["part"],
+                )
             )
         elif self.dataset in self.tensorflow_datasets:
-            return self.tensorflow(self.dataset)
+            return self.prep(self.tensorflow(self.dataset))
         elif self.dataset in self.adapter_datasets:
-            return self.custom(self.adapter_datasets[self.dataset])
+            return self.adapter(self.adapter_datasets[self.dataset])
         else:
             raise KeyError(self.dataset, "not supported")
 
+    def prep(self, dataset):
+        """
+        This method serves as a helper function for preparing datasets
+        retrieved from PyTorch or TensorFlow datasets. Specifically, it: (1)
+        flattens the arrays (and stores the original feature shape), (2) casts
+        into a pandas dataframe, (3) sets the columns to be strings, and (4)
+        saves the original feature shape as "fshape"
+
+        :param dataset: the dataset to prepare
+        :type dataset: dictionary; keys as dataset types & values as numpy arrays
+        :return: mlds-ready dataset
+        :type: dictionary; keys as dataset types & values as pandas dataframes
+        """
+        fshape = dataset[next(iter(dataset))]["data"].shape[1:]
+        for data in dataset.values():
+            data["data"] = pandas.DataFrame(data["data"].reshape(len(data["data"]), -1))
+            data["data"].columns = data["data"].columns.map(str)
+            data["labels"] = pandas.Series(data["labels"], name="class")
+        dataset["fshape"] = fshape
+        return dataset
+
     def pytorch(self, dataset, arg, parts, directory="/tmp/"):
         """
-        This function serves as a wrapper for torchvision.datasets
+        This method serves as a wrapper for torchvision.datasets
         (https://pytorch.org/vision/stable/datasets.html). While this API is
         designed to be as standardized as possible, many of the datasets
         implement their own custom API (since the parameters and the values
         they can take are defined by the dataset authors). Specifically, this
-        function: (1) downloads the entire dataset, (2) saves it in /tmp/, (3)
-        returns the dataset as a pandas dataframe.
+        method: (1) downloads the entire dataset, (2) saves it in /tmp/, (3)
+        returns the dataset as a dictionary of numpy arrays.
 
         :param dataset: a dataset from torchvision.datasets
         :type dataset: string
@@ -529,61 +553,55 @@ class Downloader:
         :type parts: list or NoneType
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: pandas dataframes representing the dataset
-        :rtype: dictionary; keys are dataset types & values are dataframes
+        :return: numpy arrays representing the dataset
+        :rtype: dictionary; keys are dataset types & values are numpy arrays
         """
 
-        # download, store the original shape, and flatten
+        # download and cast to numpy arrays (correct True & False partition names)
+        torchmap = {True: "train", False: "test"}
         tvds = {
             part: getattr(torchvision.datasets, dataset)(
                 # use keyword arguments since interfaces can differ slightly
                 **{
                     "root": directory,
                     "download": True,
-                    "transform": torchvision.transforms.ToTensor(),
                     arg: part,
                 }
             )
             for part in parts
         }
-        oshape = {part: tvds[part].data.numpy().shape for part in parts}
         return {
-            part: {
-                "data": pandas.DataFrame(
-                    dataset[part].data.numpy().reshape(oshape[part][0], -1)
-                ),
-                "labels": pandas.DataFrame(dataset[part].targets.numpy()),
-                "oshape": oshape[part],
+            torchmap.get(part, part): {
+                "data": tvds[part].data.numpy(),
+                "labels": tvds[part].targets.numpy(),
             }
             for part in parts
         }
 
     def tensorflow(self, dataset, directory="/tmp/"):
         """
-        This function serves as a wrapper for tensorflow_datasets.
+        This method serves as a wrapper for tensorflow_datasets.
         (https://www.tensorflow.org/datasets). The interfaces for the vast
         majority of datasets are identical, and thus, this wrapper largely
         prepares the data such that it conforms to the standard used throughout
-        the rest of this repository.
+        the rest of this repository (that is, (1) downloads the entire dataset,
+        (2) saves it in /tmp/, and (3) returns the dataset as a dictionary of
+        numpy arrays.
 
         :param dataset: a dataset from tensorflow_datasets
         :type dataset: string
         :param directory: directory to download the datasets to
         :type directory: string
-        :return: pandas dataframes representing the dataset
-        :rtype: dictionary; keys are dataset types & values are dataframes
+        :return: numpy arrays representing the dataset
+        :rtype: dictionary; keys are dataset types & values are numpy arrays
         """
 
-        # download, store the original shape, and flatten
+        # download and cast to numpy arrays
         tfds = tensorflow_datasets.load(dataset, data_dir=directory, batch_size=-1)
-        oshape = {part: tfds[part]["image"].numpy().shape for part in ("train", "test")}
         return {
             part: {
-                "data": pandas.DataFrame(
-                    dataset[part]["image"].numpy().reshape(oshape[part][0], -1)
-                ),
-                "labels": pandas.DataFrame(dataset[part]["label"].numpy()),
-                "oshape": oshape[part],
+                "data": tfds[part]["image"].numpy(),
+                "labels": tfds[part]["label"].numpy(),
             }
             for part in ("train", "test")
         }
