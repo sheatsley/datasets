@@ -85,17 +85,22 @@ def main(
     downloader = retrieve.Downloader(dataset)
     data = downloader.download()
 
-    # extract features (needed for "all" keyword) from first data partition
+    # get features (needed for "all" keyword) from first data partition
     part = next(iter(data))
     feat_names = data[part]["data"].columns
+    orgfshape = data.get("fshape", (len(feat_names),))
+    data.pop("fshape", None)
     print(f"Inferred {len(feat_names)} features from {part} partition.")
 
     # resovle "all" keyword to feature names minus those used in one-hot encoding
     print("Resolving 'all' keyword with inferred features...")
-    ohot_feat = [
-        f for s, f in zip(schemes, features) if transform.Transformer.onehotencoder in s
+    ohot_features = [
+        feature
+        for scheme, feature_list in zip(schemes, features)
+        if transform.Transformer.onehotencoder in scheme
+        for feature in feature_list
     ]
-    all_feat = feat_names.difference(*ohot_feat, sort=False).tolist()
+    all_feat = feat_names.difference(ohot_features, sort=False).tolist()
     features = [all_feat if f == ["all"] else f for f in features]
 
     # ensure that training preceeds testing to ensure correct transformation fits
@@ -129,7 +134,7 @@ def main(
             # read any relevant metadata
             metadata = {
                 **transformer.metadata(),
-                **{"original_shape": data.get("oshape", transformed_data.shape)},
+                **{"orgfshape": orgfshape},
                 **{"transformations": transformations},
             }
 
@@ -157,7 +162,7 @@ if __name__ == "__main__":
 
         $ mlds nslkdd -f duration count -f service --outdir datasets
             -n nslkdd_ss nslkdd_mms -s standardscaler minmaxscaler
-            -s onehotencoder -l labelencoder -a --destupefy
+            -s onehotencoder -l labelencoder -a -d
 
     This (1) downloads the NSL-KDD, (2) selects "duration" and "count" as one
     group and "service" as the second group, (3) specifies an alternative
