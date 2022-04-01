@@ -6,8 +6,8 @@ Wed Mar 30 2022
 from adapters import baseadapter  # Base Adapter class for custom datasets
 import io  # Core tools for working with streams
 import pandas  # Python Data Analysis Library
-import tarfile  # Read and write tar archive files
 from utilities import print  # Timestamped printing
+import zipfile  # Work with ZIP archives
 
 
 class UNSWNB15(baseadapter.BaseAdapter):
@@ -42,7 +42,11 @@ class UNSWNB15(baseadapter.BaseAdapter):
         super().__init__(directory, force_download)
 
         # note that the training and test sets are mistakeningly labeled in reverse
-        self.url = "https://cloudstor.aarnet.edu.au/plus/s/2DhnLGDdEECo4ys/download"
+        self.url = (
+            "https://cloudstor.aarnet.edu.au/plus/s/2DhnLGDdEECo4ys/download?path"
+            "=%2FUNSW-NB15%20-%20CSV%20Files%2Fa%20part%20of%20training%20and"
+            "%20testing%20set&files="
+        )
         self.files = (
             f"a part of training and testing set/{file}"
             for file in ("UNSW_NB15_testing-set.csv", "UNSW_NB15_training-set.csv")
@@ -52,27 +56,39 @@ class UNSWNB15(baseadapter.BaseAdapter):
     def preprocess(self, data):
         """
         Conforming to the BaseAdapter guidelines, we: (1) read the dataset
-        as-is (no unpacking necessary), and (2) we apply the desired
+        as-is (no unpacking necessary), (2) we apply a series of desired
         transformations (i.e., dropping the "id" column and the last column,
         "label", since the UNSW-NB15 is commonly used for signature detection,
-        via the "attack_cat" feature).
+        via the "attack_cat" feature), and (3) we apply a series of necessary
+        transformations to categorical variables, specifically, we remove: (a)
+        state "CLO" and "ACC" are only present in the test set (which causes
+        one-hot-encoding to fail), (b) state "PAR", "URN", and "no" are only
+        found in one sample each in the training set (and not present in the
+        test set), (c) protocol "rtp" is found in one sample in the training
+        set (and not present in the test set).
 
         :param data: the current dataset file
         :type data: bytes
         :return: santized data file
         :rtype: pandas dataframe
         """
-        with tarfile.open(fileobj=io.BytesIO(data)) as tf:
+        with zipfile.ZipFile(io.BytesIO(data)) as zipped:
 
             # extract training and testing sets into pandas dataframe
             for file in self.files:
                 print(f"Extracting {file}...")
-                data = io.BytesIO(tf.extractfile(file).read())
+                with io.TextIOWrapper(zipped.open(file)) as datafile:
 
-                # drop the first and last column
-                print("Loading & applying transformations...")
-                df = pandas.read_csv(data)
-                df.drop(columns=["id", "label"], inplace=True)
+                    # drop the first and last column
+                    print("Loading & applying transformations...")
+                    df = pandas.read_csv(datafile)
+                    df.drop(columns=["id", "label"], inplace=True)
+
+                    # apply remaining transformations
+                    invalids = {"CLO", "ACC", "PAR", "URN", "no", "rtp"}
+                    df.replace(invalids, None, inplace=True)
+                    df.dropna(inplace=True)
+                    df.reset_index(drop=True, inplace=True)
                 yield df
 
     def read(self):
