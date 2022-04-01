@@ -88,7 +88,7 @@ class Phishing(baseadapter.BaseAdapter):
         return {
             "dataset": {
                 "data": df.drop(columns="CLASS_LABEL"),
-                "labels": df["CLASS_LABEL"].copy(),
+                "labels": df.CLASS_LABEL.copy(),
             }
             for df in self.preprocess(self.download(self.url))
         }
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     """
     dataset = Phishing().read()
     print(
-        f'Phishing has {len(dataset["dataset"]["data"])} training samples,',
+        f'Phishing has {len(dataset["dataset"]["data"])} samples,',
         f'{len(dataset["dataset"]["data"].columns)} features with',
         f'{len(dataset["dataset"]["labels"].unique())} classes.',
     )

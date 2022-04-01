@@ -113,7 +113,7 @@ class UNSWNB15(baseadapter.BaseAdapter):
         return {
             partition: {
                 "data": df.drop(columns="attack_cat"),
-                "labels": df["attack_cat"].copy(),
+                "labels": df.attack_cat.copy(),
             }
             for partition, df in zip(
                 ("train", "test"),
