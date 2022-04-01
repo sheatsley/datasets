@@ -64,7 +64,7 @@ class Phishing(baseadapter.BaseAdapter):
         datafile = data.decode().splitlines()
         features = [line.split()[1] for line in datafile[2:51]]
         df = pandas.DataFrame([x.split(",") for x in datafile[53:]], columns=features)
-        return df
+        yield df
 
     def read(self):
         """
