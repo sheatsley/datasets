@@ -40,14 +40,14 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     class_ratios = labelframe.value_counts(normalize=True)
     sorted_classes = class_ratios.index
     label_idxs = [labelframe == label for label in sorted_classes]
-    rows = int(((len(dataframe.columns) + 1) / ppr) + 0.5)
+    rows = -(-(len(dataframe.columns) + 1) // ppr)
 
     # (1): compute feature histogram (plot most common class first)
     fig, axes = plt.subplots(rows, ppr, figsize=(3 * ppr, 2 * rows))
     for idx, (feature, min_val, max_val, ax) in enumerate(
         zip(dataframe.columns, dataframe.min(), dataframe.max(), axes.flat)
     ):
-        print(f"{idx/len(dataframe.columns):.1%} - Analyzing {feature}...\r", end="")
+        print(f"{idx/len(dataframe.columns):.1%} - Analyzing {feature}...", end="\r")
         ax.set_title(f"{idx}: {feature}")
         for label_idx, label in zip(label_idxs, sorted_classes):
             hist, bins = np.histogram(
@@ -81,6 +81,9 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     # (1) & (2): remove axes from remaining plots, cleanup appearance, and save
     for idx in range(idx + 1, len(axes.flat)):
         axes.flat[idx].set_axis_off()
+    dpi = int(min(fig.get_dpi(), 65536 / (3 * ppr), 65536 / (2 * rows)))
+    print(f"Fig is too big! Dropping dpi to {dpi}...") if dpi != fig.get_dpi() else None
+    fig.set_dpi(dpi)
     fig.tight_layout()
     fig.savefig(outdir / f"{name}_histograms", bbox_inches="tight")
 
@@ -95,7 +98,7 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     ax.set_xticks(range(cols), labels=fullframe.columns, rotation=45)
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
     for x, y in itertools.product(*itertools.tee(range(cols))):
-        print(f"{x / cols:.1%} - Analyzing {fullframe.columns[x]}...\r", end="")
+        print(f"{x / cols:.1%} - Analyzing {fullframe.columns[x]}...", end="\r")
         ax.text(x, y, correlations.iloc[x, y], ha="center", va="center", color="w")
 
     # (3) set title, add colorbar, and save
@@ -103,6 +106,9 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
     ax.set_title(f"{name} Pearson Correlation Matrix")
     divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
     fig.colorbar(art, cax=divider.append_axes("right", size="1%", pad=0.05))
+    dpi = int(min(fig.get_dpi(), 65536 / (cols / 2)))
+    print(f"Fig is too big! Dropping dpi to {dpi}...") if dpi != fig.get_dpi() else None
+    fig.set_dpi(dpi)
     fig.tight_layout()
     fig.savefig(outdir / f"{name}_correlation", bbox_inches="tight")
 
@@ -132,6 +138,9 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/"), ppr=4):
         rowColours=cell_col[:, 0],
         loc="center",
     )
+    dpi = int(min(fig.get_dpi(), 65536 / (len(statsframe) // 5)))
+    print(f"Fig is too big! Dropping dpi to {dpi}...") if dpi != fig.get_dpi() else None
+    fig.set_dpi(dpi)
     fig.tight_layout()
     fig.savefig(outdir / f"{name}_statistics", bbox_inches="tight")
     return None
