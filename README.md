@@ -1,47 +1,70 @@
-# Datasets
+# Machine Learning Datasets
 
 This repo contains scripts for downloading, preprocessing, and numpy-ifying
 popular machine learning datasets. Across projects, I commonly found myself
 rewriting the same lines of code to standardize, normalize, or other-ize data,
 encode categorical variables, parse out subsets of features, among other
-miscellanea. To alleviate reinventing the wheel, this repo consumes a
-template-style definition for how a dataset should be parsed and the library
-takes care of the rest. 
+miscellanea. To alleviate reinventing the wheel, this repo retrieves,
+parses, and transforms datasets as desired via flexible command-line arguments.
 
-For loading data, it supports anything `numpy.genfromtxt` can consume and
-`arff` (from [liac-arff](https://pypi.org/project/liac-arff/)). For
-manipulating data, there are wrappers for many popular `scikit-learn`
-`preprocessing` transformers in `utils/scale.py` and `utils/preprocess.py`.
+## Datasets
 
-The main magic is found in `utils/handler.py`; at the bottom, example templates
-haven been provided. The arguments are:
+This repo can retrieve datasets from a variety of online sources, as well as
+through popular machine learning frameworks, such as PyTorch and Tensorflow.
+While most datasets from
+[torchvision](https://pytorch.org/vision/stable/datasets.html) or
+[tensorflow_datasets](https://www.tensorflow.org/datasets) should be readily
+retrievable, not every dataset has been tested. The following datasets are
+currently available (and tested):
 
-Argument  |Description
-----------|-----------
-`header`  | whether or not a header row exists (which will be removed)
-`include` | only load the specified columns
-`label`   | indicies for labels
-`norm`    | range of features to be norm'd together for `unit_norm` scaler
-`onehot`  | list of categorical features to convert to one-hot vectors
-`path`    | path to the dataset to load
-`preserve`| do not modify these indicies for any scaling scheme (ie labels)
-`scheme`  | feature scaling schema (definitions in scale module)
-`size`    | the number of training samples (only needed if test is true)
-`test`    | whether or not a test set exists (inferred to be 2nd path)
+* [NSL-KDD](https://www.unb.ca/cic/datasets/nsl.html)
+* [UNSW-NB15](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity/ADFA-NB15-Datasets/)
+* [Phishing Dataset](https://www.fcsit.unimas.my/phishing-dataset)
+* [CIC-MalMem-2022](https://www.unb.ca/cic/datasets/malmem-2022.html)
+* [MNIST](http://yann.lecun.com/exdb/mnist/)
+* [Fashion-MNIST)(https://github.com/zalandoresearch/fashion-mnist)
 
+## Arguments
 
-## Installation
+The following arguments are supported:
 
-To convert the available datasets (ie,
-[NSL-KDD](https://www.unb.ca/cic/datasets/nsl.html),
-[UNSW-NB15](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity/ADFA-NB15-Datasets/),
-[Phishing Websites Dataset](http://www.fcsit.unimas.my/research/legit-phish-set),
-[DREBIN](https://www.sec.cs.tu-bs.de/~danarp/drebin/),
-[DGD](https://ieeexplore.ieee.org/document/9343331)), clone the repo, and run
-`python3 utils/handler.py`. While this code has been successful at handling a
-handful of unique datasets I have used, this is obviously research-level code;
-I am sure some instances will break. 
+Argument   | Description
+-----------|-----------
+`dataset`  | dataset to retrieve (`adapters/` contains other datasets)
+`features` | features to manipulate (either index or name, if supported)
+`schemes`  | feature manipulation scheme(s) to apply (check `transform.py`)
+`labels`   | label manipulation scheme(s) to apply (check `transform.py`)
+`names`    | filenames for transformed datasets
+`outdir`   | specified output directory (default is `out/`)
+`precision`| maximum dataset precision
+`analytics`| compute basic dataset statistics (check `utilities.py`)
+`destupefy`| apply heuristics to clean the dataset (check `transform.py`)
+`template` | apply commonly-accepted transformations (check `templates.py`)
+`version`  | show the current version number
 
-For CiFar10, download the python version
-[here](https://www.cs.toronto.edu/~kriz/cifar.html), unzip the file, and move
-the folder to this directory. 
+## Example usage
+
+Below are some commands you may find useful for running this repo:
+
+    python3 mlds.py mnist -t
+
+This downloads MNIST and applies the transformations found in `templates.py`;
+features are normalized between 0-1 and the dataset is saved as `mnist` to
+`out/`.
+
+    python3 mlds.py fashionmnist -f all -s minmaxscaler standardscaler
+    -n fmnist_mms fmnist_ssc --outdir transformations
+
+This downloads fashion-MNIST and creates two copies of the dataset: one where
+all features are normalized between 0-1 and another where features are
+standardized. The transformed datasets are named `fmnist_mms` & `fmnist_ssc`,
+respectively, and both are saved in a folder called `transformations`.
+
+    python3 mlds.py nslkdd -f all -f protocol_type service flag -s minmaxscaler
+    onehotencoder -l labelencoder
+
+This downloads the NSL-KDD and creates one copy of the dataset:
+`protocol_type`, `service`, and `flag` features are one-hot encoded, while the
+remaining features (`all` applies transformations to all features, except those
+that are one-hot encoded) are normalized between 0-1. The dataset is saved as
+`nslkdd_minmaxscaler_onehotencoder_labelencoder` and written to `out/`.
