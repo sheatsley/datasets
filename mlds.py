@@ -1,15 +1,13 @@
 """
 This module defines the main entry point for the machine learning datasets
-repo. It consists of (1) parsing arguments, (2) retrieving datasets, (3)
-feature scaling applications, (4) one-hot, label, & integer encoding, and (5)
-writing the resultant arrays to disk.
+repo. Transforming machine learning datasets into useful representations
+requires a substantially large toolset (i..e, imports), while reading
+transformed datasets should be as fast as possible. To support these
+paradigms, this module segments which dependencies are loaded based
+on whether data is to be transformed or simply retrieved.
 Author: Ryan Sheatsley
-Mon Feb 28 2022
+Mon Apr 4 2022
 """
-import retrieve  # Download machine learning datasets
-import save  # Save (and load) machine learning datasets quickly
-import transform  # Apply transformations to machine learning datasets
-from utilities import print  # Timestamped printing
 
 
 def __getattr__(dataset):
@@ -24,132 +22,68 @@ def __getattr__(dataset):
     :return: complete dataset with metadata
     :rtype: namedtuple object
     """
-    return save.read(dataset.lower())
+    return load(dataset.lower())
 
 
-def main(
-    analytics,
-    dataset,
-    destupefy,
-    features,
-    labels,
-    names,
-    outdir,
-    precision,
-    schemes,
-):
+def load(dataset, out="out/"):
     """
-    This function represents the heart of MachineLearningDatasets (MLDS). Given
-    a dataset, a list of features, a list of label transformations, a list of
-    output names, an output directory, numerical precision, a list of data
-    transformation schemes, and whether to produce resultant analyitcs and
-    apply (experimental) destupefication subroutines, MLDS will perform the
-    following steps:
+    This function is the main entry point from datasets that been proccessed
+    and saved by MLDS. It depickles saved data, and returns the namedtuple
+    structure defined in the utilities module (i.e., the assemble function).
+    Importantly, loading datasets executes the following based on the dataset
+    arugment (parsed as {dataset}-{partition}): (1) if the partition is
+    specified, then that partition is returned, else, (2) if the specified
+    partition is "all", then *all* partitions are returned, else, if a
+    partition is *not* specified and (3) there is only one partition, it is
+    returned, else (4) if "train" & "test" are partitions, they are returned,
+    else (4) an error is raised.
 
-        (1) Retrieve the dataset from either torchvision, tensorflow_datasets,
-            or a custom dataset (found in the adapaters directory).
-        (2) Apply transformations to specific features and reassmble the
-            dataset is in the original order.
-        (3) Optionally clean the data and produce basic statistics.
-        (4) Save the dataset in the specified output directory with
-            the specified name in the specified precision.
-
-    Practically speaking, this function mediates interactions between
-    Downloader and Transformer objects, while saving data so that it can be
-    readily retrieved by the load function in this module.
-
-    :param analytics: whether analytics are computed and saved
-    :type analytics: bool
-    :param dataset: dataset to download
+    :param dataset: the dataset to load
     :type dataset: str
-    :param destupefy: whether data cleaning is performed (experimental)
-    :type destupefy: bool
-    :param features: features to manipulate
-    :type features: tuple of tuples containing str
-    :param labels: transformations to apply to the labels
-    :type labels: tuple of tuples of Transformer callables
-    :param names: filenames of the saved datasets
-    :type names: tuple of str
-    :param outdir: ouput directory of saved datasets
-    :type outdir: pathlib path
-    :param precision: dataset precision
-    :type precision: numpy type
-    :param schemes: transformations to apply to the data
-    :type schemes: tuple of tuples of Transformer callables
-    :return: None
-    :rtype: NoneType
+    :param out: directory where the dataset is saved
+    :type out: pathlib path
+    :return: loaded dataset
+    :rtype: namedtuple
     """
+    import collections  # Container datatypes
+    import dill  # serialize all of python
+    import pathlib  # Object-oriented filesystem paths
 
-    # instantiate Downloader and download the dataset
-    print(f"Instantiating Downloader & downloading {dataset}...")
-    downloader = retrieve.Downloader(dataset)
-    data = downloader.download()
+    # check if a partition is specified
 
-    # get features (needed for "all" keyword) from first data partition
-    part = next(iter(data))
-    feat_names = data[part]["data"].columns
-    orgfshape = data.get("fshape", (len(feat_names),))
-    data.pop("fshape", None)
-    print(f"Inferred {len(feat_names)} features from {part} partition.")
+    out = pathlib.Path(__file__).parent / "out/" if out == "out/" else pathlib.Path(out)
+    print(f"Loading {dataset}.pkl from {out}/...")
+    data, part = split if len(split := dataset.rsplit("-", 1)) == 2 else (dataset, None)
+    partitions = set(out.glob(f"{dataset}*.pkl"))
+    part_stems = [p.stem.rsplit("-")[1] for p in partitions]
 
-    # resovle "all" keyword to feature names minus those used in one-hot encoding
-    print("Resolving 'all' keyword with inferred features...")
-    ohot_features = [
-        feature
-        for scheme, feature_list in zip(schemes, features)
-        if transform.Transformer.onehotencoder in scheme
-        for feature in feature_list
-    ]
-    all_feat = feat_names.difference(ohot_features, sort=False).tolist()
-    features = [all_feat if f == ["all"] else f for f in features]
+    # case 1: the partition is specified
+    if part and part != "all":
+        with open(out / f"{dataset}.pkl", "rb") as f:
+            return dill.load(f)
 
-    # ensure that training preceeds testing to ensure correct transformation fits
-    print("Instantiating Transformer & applying transformations...")
-    parts = (
-        (["train", "test"] + [p for p in data if p not in {"train", "test"}])
-        if all(p in data for p in {"train", "test"})
-        else list(data)
-    )
-    transformer = transform.Transformer(features, labels, schemes)
+    # case 2: the partition is "all"
+    elif part and part == "all":
+        datasets = []
+        for part in partitions:
+            print(f"Loading {part.stem} partition...")
+            with open(part, "rb") as f:
+                datasets.append(dill.load(f))
+        return collections.namedtuple("Dataset", part_stems)(*datasets)
 
-    # apply transformations to each parittion
-    for part in parts:
-        print(f"Applying transformations to {dataset} {part} partition...")
-        transformer.apply(*data[part].values(), part != "test")
+    # case 3: there is only one partition
+    elif len(partitions) == 1:
+        with open(*partitions, "rb") as f:
+            return dill.load(f)
 
-        # assemble the transformations (and restore feature names)
-        for (transformed_data, transformed_labels, transformations), name in zip(
-            transformer.export(), names
-        ):
-
-            # if applicable, destupefy
-            transformed_data, transformed_labels = (
-                transformer.destupefy(
-                    transformed_data, transformed_labels, part != "test"
-                )
-                if destupefy
-                else (transformed_data, transformed_labels)
-            )
-
-            # read any relevant metadata
-            metadata = {
-                **transformer.metadata(),
-                **{"orgfshape": orgfshape},
-                **{"transformations": transformations},
-            }
-
-            # save (with analytics, if desired)
-            save.write(
-                transformed_data,
-                transformed_labels,
-                f"{name}-{part}",
-                metadata,
-                precision=precision,
-                analytics=analytics,
-                outdir=outdir,
-            )
-    print(f"{dataset} retrieval, transformation, and export complete!")
-    return None
+    # case 4: train and test are available
+    elif all(p in part_stems for p in ("train", "test")):
+        datasets = []
+        for part in ("train", "test"):
+            print(f"Loading {part} partition...")
+            with open(out / (f"{'-'.join([dataset, part])}.pkl"), "rb") as f:
+                datasets.append(dill.load(f))
+        return collections.namedtuple("Dataset", ("train", "test"))(*datasets)
 
 
 if __name__ == "__main__":
@@ -175,7 +109,8 @@ if __name__ == "__main__":
     (to both dataset copies).
     """
     import arguments  # Command-line Argument parsing
+    import datasets  # Machine learning dataset transformation framework
 
     # parse command-line args and enter main
-    main(**arguments.validate_args())
+    datasets.main(**arguments.validate_args())
     raise SystemExit(0)
