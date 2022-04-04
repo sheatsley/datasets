@@ -156,13 +156,16 @@ def pearson(dataframe, name, size):
     # compute correlations & compress figsize if needed
     correlations = dataframe.corr().round(2)
     features = len(correlations)
-    size = min(2 ** 16 // plt.figure().get_dpi(), size)
+    corr_size = min(2 ** 15 // plt.figure().get_dpi(), size)
     plt.close("all")
-    fig, axes = plt.subplots(figsize=(size, size))
+    fig, axes = plt.subplots(figsize=(corr_size, corr_size))
     art = axes.matshow(correlations)
     axes.set_yticks(range(features), labels=dataframe.columns)
     axes.set_xticks(range(features), labels=dataframe.columns, rotation=45)
     axes.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+
+    # if we had to drop the figure size, skip adding text
+    features = features if corr_size == size else 0
     for x, y in itertools.product(*itertools.tee(range(features))):
         print(f"{x/features:.1%} - Analyzing {dataframe.columns[x]}...", end="\r")
         axes.text(x, y, correlations.iloc[x, y], ha="center", va="center", color="w")
