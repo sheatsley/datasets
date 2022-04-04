@@ -33,7 +33,7 @@ def read(dataset, outdir=pathlib.Path("out/")):
     """
 
     # check if a partition is specified
-    print(f"Loading {dataset} from {outdir}...")
+    print(f"Loading {dataset}.pkl from {outdir}/...")
     data, part = split if len(split := dataset.rsplit("-", 1)) == 2 else (dataset, None)
     partitions = set(outdir.glob(f"{dataset}*.pkl"))
     part_stems = [p.stem.rsplit("-")[1] for p in partitions]
