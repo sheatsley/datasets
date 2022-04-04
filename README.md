@@ -22,7 +22,7 @@ currently available (and tested):
 * [Phishing Dataset](https://www.fcsit.unimas.my/phishing-dataset)
 * [CIC-MalMem-2022](https://www.unb.ca/cic/datasets/malmem-2022.html)
 * [MNIST](http://yann.lecun.com/exdb/mnist/)
-* [Fashion-MNIST)(https://github.com/zalandoresearch/fashion-mnist)
+* [Fashion-MNIST](https://github.com/zalandoresearch/fashion-mnist)
 
 ## Arguments
 
@@ -68,3 +68,11 @@ This downloads the NSL-KDD and creates one copy of the dataset:
 remaining features (`all` applies transformations to all features, except those
 that are one-hot encoded) are normalized between 0-1. The dataset is saved as
 `nslkdd_minmaxscaler_onehotencoder_labelencoder` and written to `out/`.
+
+Once datasets have been transformed, they can be readily loaded via (for
+example):
+
+    import mlds.nslkdd_minmaxscaler_onehotencoder_labelencoder as nslkdd
+
+From there, training data can be retrieved as `nslkdd.train.data` and the
+corresponding labels can be retrieved as `nslkdd.train.labels`.
