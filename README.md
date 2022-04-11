@@ -61,7 +61,7 @@ standardized. The transformed datasets are named `fmnist_mms` & `fmnist_ssc`,
 respectively, and both are saved in a folder called `transformations`.
 
     python3 mlds.py nslkdd -f all -f protocol_type service flag -s minmaxscaler
-    onehotencoder -l labelencoder
+    -s onehotencoder -l labelencoder
 
 This downloads the NSL-KDD and creates one copy of the dataset:
 `protocol_type`, `service`, and `flag` features are one-hot encoded, while the
