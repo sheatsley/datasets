@@ -50,7 +50,6 @@ def load(dataset, out="out/"):
     import pathlib  # Object-oriented filesystem paths
 
     # check if a partition is specified
-
     out = pathlib.Path(__file__).parent / "out/" if out == "out/" else pathlib.Path(out)
     print(f"Loading {dataset}.pkl from {out}/...")
     data, part = split if len(split := dataset.rsplit("-", 1)) == 2 else (dataset, None)
