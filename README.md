@@ -76,3 +76,17 @@ example):
 
 From there, training data can be retrieved as `nslkdd.train.data` and the
 corresponding labels can be retrieved as `nslkdd.train.labels`.
+
+## Dependencies
+
+This repo was built with the following modules and versions:
+
+* python 3.9.12
+* [dill](https://github.com/uqfoundation/dill) 0.3.4
+* [matplotlib](https://matplotlib.org) 3.5.1
+* [numpy](https://numpy.org) 1.22.3
+* [pandas](https://pandas.pydata.org) 1.4.1
+* [requests](https://docs.python-requests.org/en/latest/) 2.27.1
+* [scikit-learn](https://scikit-learn.org/stable/) 1.0.2
+* [tensorflow-datasets](https://www.tensorflow.org/datasets) 4.5.2
+* [torchvision](https://pytorch.org/vision/stable/index.html) 0.12.0
