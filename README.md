@@ -17,12 +17,13 @@ While most datasets from
 retrievable, not every dataset has been tested. The following datasets are
 currently available (and tested):
 
-* [NSL-KDD](https://www.unb.ca/cic/datasets/nsl.html)
-* [UNSW-NB15](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity/ADFA-NB15-Datasets/)
-* [Phishing Dataset](https://www.fcsit.unimas.my/phishing-dataset)
 * [CIC-MalMem-2022](https://www.unb.ca/cic/datasets/malmem-2022.html)
-* [MNIST](http://yann.lecun.com/exdb/mnist/)
+* [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html)
 * [Fashion-MNIST](https://github.com/zalandoresearch/fashion-mnist)
+* [MNIST](http://yann.lecun.com/exdb/mnist/)
+* [NSL-KDD](https://www.unb.ca/cic/datasets/nsl.html)
+* [Phishing Dataset](https://www.fcsit.unimas.my/phishing-dataset)
+* [UNSW-NB15](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity/ADFA-NB15-Datasets/)
 
 ## Arguments
 
