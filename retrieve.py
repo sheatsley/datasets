@@ -572,8 +572,12 @@ class Downloader:
         }
         return {
             torchmap.get(part, part): {
-                "data": tvds[part].data.numpy(),
-                "labels": tvds[part].targets.numpy(),
+                "data": data.numpy()
+                if hasattr(data := tvds[part].data, "numpy")
+                else data,
+                "labels": labels.numpy()
+                if hasattr(labels := tvds[part].targets, "numpy")
+                else labels,
             }
             for part in parts
         }
