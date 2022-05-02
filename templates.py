@@ -32,7 +32,12 @@ class Templates:
         "names": ["cicmalmem2022"],
         "schemes": [[transform.Transformer.minmaxscaler]],
     }
-
+    cifar10 = {
+        "features": [["all"]],
+        "labels": [transform.Transformer.identity],
+        "names": ["cifar10"],
+        "schemes": [[transform.Transformer.minmaxscaler]],
+    }
     fashionmnist = {
         "features": [["all"]],
         "labels": [transform.Transformer.identity],
