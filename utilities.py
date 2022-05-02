@@ -40,8 +40,9 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/")):
 
     # (2) compute feature histograms
     print(f"Computing histograms for dataframe of shape {dataframe.shape}...")
-    rows = -(-(len(dataframe.columns) + 1) // 6)
-    fig = histogram(dataframe, labelframe, name, rows=rows, cols=6)
+    cols = 6
+    rows = -(-(len(dataframe.columns) + 1) // cols)
+    fig = histogram(dataframe, labelframe, name, rows=rows, cols=cols)
     print(f"Histogram complete! Saving as {name}_histograms.pdf...")
     fig.savefig(outdir / f"{name}_histograms.pdf", bbox_inches="tight")
 
@@ -98,7 +99,9 @@ def histogram(dataframe, labelframe, name, rows, cols):
     label_idxs = [labelframe == label for label in sorted_classes]
 
     # compute feature histogram (plot most common class first)
-    fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 2 * rows))
+    row_size = min(int(2**14 // plt.figure().get_dpi()), rows)
+    plt.close("all")
+    fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 2 * row_size))
     for idx, (feature, min_val, max_val, ax) in enumerate(
         zip(dataframe.columns, dataframe.min(), dataframe.max(), axes.flat)
     ):
@@ -156,7 +159,7 @@ def pearson(dataframe, name, size):
     # compute correlations & compress figsize if needed
     correlations = dataframe.corr().round(2)
     features = len(correlations)
-    corr_size = min(2 ** 15 // plt.figure().get_dpi(), size)
+    corr_size = min(2**15 // plt.figure().get_dpi(), size)
     plt.close("all")
     fig, axes = plt.subplots(figsize=(corr_size, corr_size))
     art = axes.matshow(correlations)
