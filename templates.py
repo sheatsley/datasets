@@ -4,7 +4,11 @@ args) applied to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Mar 29 2022
 """
+import arguments  # Command-line Argument parsing
+import datasets  # Machine learning dataset transformation framework
+import sys  # System-specific parameters and functions
 import transform  # Order-preserving transformations for machine learning data
+from utilities import print  # Timestamped printing
 
 
 class Templates:
@@ -93,5 +97,16 @@ class Templates:
 
 
 if __name__ == "__main__":
-    """ """
+    """
+    Running this module directly automatically retrieves and transforms *all*
+    supported datasets that have a template defined. Importantly, it produces
+    analytics and also applies destupefication to non-image datasets.
+    """
+    non_imgs = ("cicmalmem2022", "nslkdd", "phishing", "unswnb15")
+    templates = [d for d in dir(Templates) if not d.startswith("_")]
+    print(f"Downloading, transforming, and analyzing {len(templates)} datasets...")
+    for idx, dataset in enumerate(templates, start=1):
+        print(f"On {dataset} ({idx} of {len(templates)})...")
+        sys.argv = f"mlds.py {dataset} -ta{'d' if dataset in non_imgs else ''}".split()
+        datasets.main(**arguments.validate_args())
     raise SystemExit(0)
