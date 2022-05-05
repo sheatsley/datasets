@@ -8,7 +8,6 @@ import adapters  # Third-party datasets
 import pandas  # Python Data Analysis Library
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
-from utilities import print  # Timestamped printing
 
 # TODO
 # add unit tests
@@ -46,8 +45,15 @@ class Downloader:
         and (3) any preprocessing directives such that it can be prepared into
         a pandas dataframe. The supported datasets are:
 
+        Malware Detection
+        - CIC-MalMem-2022
+
         Network Intrusion Detection
         - NSL-KDD
+        - UNSW-NB15
+
+        Phishing Detection
+        - Phishing dataset
 
         -- PyTorch --
         The datasets in PyTorch have non-standardized interfaces. Thus,
