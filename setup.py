@@ -1,7 +1,7 @@
 """
-Build script for machine learning datasets.
+Build script for Machine Learning Datasets
 Author: Ryan Sheatsley
-Mon Apr 4 2022
+Date: Thu Jun 2 2022
 """
 import setuptools  # Easily download, build, install, upgrade, and uninstall Python packages
 
@@ -11,24 +11,30 @@ with open("README.md", "r") as f:
 setuptools.setup(
     author="Ryan Sheatsley",
     author_email="ryan@sheatsley.me",
-    description="Machine Learning Datasets",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+    ],
+    description="Scripts & an API for working with machine learning datasets",
+    entry_points={"console_scripts": "mlds=mlds:main"},
+    install_requires=[
+        "pandas",
+        "requests",
+        "scikit-learn",
+        "tensorflow-datasets",
+        "torchvision",
+    ],
     license="BSD",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=[
-        "dill>=0.3.4",
-        "matplotlib>=3.5.1",
-        "numpy>=1.22.3",
-        "pandas>=1.4.1",
-        "requests>=1.0.2",
-        "scikit-learn>=1.0.2",
-        "tensorflow-datasets>=4.5.2",
-        "torchvision>=0.12.0",
-    ],
     keywords="machine-learning numpy datasets",
     name="mlds",
-    py_modules=["mlds"],
+    packages=setuptools.find_packages(),
     python_requires=">=3.8",
     url="https://github.com/sheatsley/datasets",
-    version="3.0",
+    version="3.0.0a1",
 )
