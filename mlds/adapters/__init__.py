@@ -4,7 +4,6 @@ Author: Ryan Sheatsley
 Thu Feb 10 2022
 """
 from mlds.adapters import (
-    # baseadapter,  # Base Adapter class for custom datasets
     cicmalmem2022,  # Adapter for the CIC-MalMem-2022
     nslkdd,  # Adapter for the NSL-KDD
     phishing,  # Adapter for the Phishing dataset
