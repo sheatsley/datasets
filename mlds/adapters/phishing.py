@@ -3,9 +3,9 @@ This module defines a custom adapter for downloading the Phishing dataset.
 Author: Ryan Sheatsley
 Tue Mar 29 2022
 """
-from adapters import baseadapter  # Base Adapter class for custom datasets
+from mlds.adapters import baseadapter  # Base Adapter class for custom datasets
 import pandas  # Python Data Analysis Library
-from utilities import print  # Timestamped printing
+from mlds.utilities import print  # Timestamped printing
 
 
 class Phishing(baseadapter.BaseAdapter):

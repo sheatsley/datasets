@@ -6,7 +6,7 @@ Fri Feb 11 2022
 import pandas  # Python Data Analysis Library
 import pathlib  # Object-oriented filesystem paths
 import requests  # HTTP for Humans
-from utilities import print  # Timestamped printing
+from mlds.utilities import print  # Timestamped printing
 
 
 class BaseAdapter:
