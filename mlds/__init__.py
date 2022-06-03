@@ -22,6 +22,9 @@ def __getattr__(dataset):
     :return: complete dataset with metadata
     :rtype: namedtuple object
     """
+    print("YOU PULLED GETATTR", dataset)
+    if dataset == "__path__":
+        raise AttributeError
     return load(dataset.lower())
 
 
@@ -84,8 +87,11 @@ def load(dataset, out="out/"):
                 datasets.append(dill.load(f))
         return collections.namedtuple("Dataset", ("train", "test"))(*datasets)
 
+    # case 5: the pickle was not found
+    raise FileNotFoundError(f"{dataset} not found in '{out}'! (Is it downloaded?)")
 
-if __name__ == "__main__":
+
+def main():
     """
     This is the entry point when running MachineLearningDataSets via the
     command-line. It first parses arguments from the command line, sets the
@@ -107,9 +113,12 @@ if __name__ == "__main__":
     copies, and (7) computes basic analytics, and (8) applies destupefication
     (to both dataset copies).
     """
-    import arguments  # Command-line Argument parsing
-    import datasets  # Machine learning dataset transformation framework
+    import mlds.arguments as arguments  # Command-line Argument parsing
+    import mlds.datasets as datasets  # Machine learning dataset transformations
 
     # parse command-line args and enter main
-    datasets.main(**arguments.validate_args())
-    raise SystemExit(0)
+    raise SystemExit(datasets.main(**arguments.validate_args()))
+
+
+if __name__ == "__main__":
+    main()
