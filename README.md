@@ -53,16 +53,14 @@ This downloads MNIST and applies the transformations found in `templates.py`;
 features are normalized between 0-1 and the dataset is saved as `mnist` to
 `out/`.
 
-    python3 mlds.py fashionmnist -f all -s minmaxscaler standardscaler
-    -n fmnist_mms fmnist_ssc --outdir transformations
+    python3 mlds.py fashionmnist -f all -s minmaxscaler standardscaler -n fmnist_mms fmnist_ssc --outdir transformations
 
 This downloads fashion-MNIST and creates two copies of the dataset: one where
 all features are normalized between 0-1 and another where features are
 standardized. The transformed datasets are named `fmnist_mms` & `fmnist_ssc`,
 respectively, and both are saved in a folder called `transformations`.
 
-    python3 mlds.py nslkdd -f all -f protocol_type service flag -s minmaxscaler
-    -s onehotencoder -l labelencoder
+    python3 mlds.py nslkdd -f all -f protocol_type service flag -s minmaxscaler -s onehotencoder -l labelencoder
 
 This downloads the NSL-KDD and creates one copy of the dataset:
 `protocol_type`, `service`, and `flag` features are one-hot encoded, while the
@@ -73,7 +71,8 @@ that are one-hot encoded) are normalized between 0-1. The dataset is saved as
 Once datasets have been transformed, they can be readily loaded via (for
 example):
 
-    import mlds.nslkdd_minmaxscaler_onehotencoder_labelencoder as nslkdd
+    import mlds
+    nslkdd = mlds.nslkdd_minmaxscaler_onehotencoder_labelencoder
 
 From there, training data can be retrieved as `nslkdd.train.data` and the
 corresponding labels can be retrieved as `nslkdd.train.labels`.
