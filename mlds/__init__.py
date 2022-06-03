@@ -10,6 +10,33 @@ Mon Apr 4 2022
 """
 
 
+class Dataset:
+    """
+    The Dataset class represents the main interface for working with loaded
+    datasets via the load method in this module. Specifically, it: (1) provides
+    an intuitive representation of loaded partitions (including the partitions,
+    the number of samples, and associated metadata), and (2) defines wrappers
+    for casting numpy arrays into popular datatypes used in machine learning
+    (e.g., PyTorch Tensors).
+
+    :func:`__init__`: prepares loaded data
+    :func:`__repr__`: shows useful dataset statistics
+    :func:`tensor`: creates a tensor from a numpy array
+    """
+
+    def __init__(self, data):
+        """
+        This method instantiates Dataset objects and builds a representation
+        from the paired metadata.
+
+        :param data: the loaded data
+        :type data: namedtuple
+        :return: a dataset
+        :rtype: Dataset object
+        """
+        return
+
+
 def __getattr__(dataset):
     """
     After datasets have been processed by MLDS, this function provides an
@@ -22,7 +49,6 @@ def __getattr__(dataset):
     :return: complete dataset with metadata
     :rtype: namedtuple object
     """
-    print("YOU PULLED GETATTR", dataset)
     if dataset == "__path__":
         raise AttributeError
     return load(dataset.lower())
