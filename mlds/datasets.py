@@ -9,10 +9,10 @@ Mon Feb 28 2022
 import dill  # serialize all of python
 import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
-import retrieve  # Download machine learning datasets
-import transform  # Apply transformations to machine learning datasets
-import utilities  # Miscellaneous helper functions
-from utilities import print  # Timestamped printing
+import mlds.retrieve as retrieve  # Download machine learning datasets
+import mlds.transform as transform  # Order-preserving data transformations
+import mlds.utilities as utilities  # Miscellaneous helper functions
+from mlds.utilities import print  # Timestamped printing
 
 
 def main(
@@ -147,7 +147,7 @@ def save(
     metadata={},
     precision=np.float32,
     analytics=False,
-    outdir=pathlib.Path("out/"),
+    outdir=pathlib.Path(__file__).parent / "out/",
 ):
     """
     This function is the main exit point from MLDS. It consumes a dataset and

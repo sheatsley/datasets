@@ -7,9 +7,9 @@ import argparse  # Parser for command-line options, arguments and sub-commands
 import itertools  # Functions creating iterators for efficient looping¶
 import numpy as np  # The fundamental package for scientific computing with Python
 import pathlib  # Object-oriented filesystem paths
-import templates  # Predefined dataset transformations
-import transform  # Order-preserving transformations for machine learning data
-from utilities import print  # Timestamped printing
+import mlds.templates as templates  # Predefined dataset transformations
+import mlds.transform as transform  # Order-preserving data transformations
+from mlds.utilities import print  # Timestamped printing
 
 
 def parse_args():
@@ -58,7 +58,7 @@ def parse_args():
     )
     p.add_argument(
         "--outdir",
-        default="out",
+        default=pathlib.Path(__file__).parent / "out/",
         help="output directory",
         type=pathlib.Path,
     )

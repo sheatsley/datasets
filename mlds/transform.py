@@ -6,7 +6,7 @@ Tue Feb 15 2022
 import itertools  # Functions creating iterators for efficient looping
 import pandas  # Python Data Analysis Library
 import sklearn.preprocessing  # Preprocessing and Normalization
-from utilities import print  # Timestamped printing
+from mlds.utilities import print  # Timestamped printing
 
 
 class Destupefier(sklearn.base.TransformerMixin):

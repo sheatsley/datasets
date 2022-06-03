@@ -4,11 +4,9 @@ args) applied to machine learning datasets.
 Author: Ryan Sheatsley
 Tue Mar 29 2022
 """
-import arguments  # Command-line Argument parsing
-import datasets  # Machine learning dataset transformation framework
-import sys  # System-specific parameters and functions
-import transform  # Order-preserving transformations for machine learning data
-from utilities import print  # Timestamped printing
+import mlds.datasets as datasets  # Machine learning dataset transformation framework
+import mlds.transform as transform  # Order-preserving data transformations
+from mlds.utilities import print  # Timestamped printing
 
 
 class Templates:
@@ -102,6 +100,9 @@ if __name__ == "__main__":
     supported datasets that have a template defined. Importantly, it produces
     analytics and also applies destupefication to non-image datasets.
     """
+    import mlds.arguments as arguments  # Command-line Argument parsing
+    import sys  # System-specific parameters and functions
+
     non_imgs = ("cicmalmem2022", "nslkdd", "phishing", "unswnb15")
     templates = [d for d in dir(Templates) if not d.startswith("_")]
     print(f"Downloading, transforming, and analyzing {len(templates)} datasets...")

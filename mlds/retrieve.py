@@ -4,7 +4,7 @@ repositories.
 Author: Ryan Sheatsley
 Fri Jun 18 2021
 """
-import adapters  # Third-party datasets
+import mlds.adapters as adapters  # Third-party datasets
 import pandas  # Python Data Analysis Library
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
