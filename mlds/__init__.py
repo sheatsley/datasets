@@ -24,17 +24,30 @@ class Dataset:
     :func:`tensor`: creates a tensor from a numpy array
     """
 
-    def __init__(self, data):
+    def __init__(self, partitions):
         """
         This method instantiates Dataset objects and builds a representation
         from the paired metadata.
 
-        :param data: the loaded data
-        :type data: namedtuple
+        :param partitions: the loaded data partitions
+        :type partitions: list of tuples of form: (partition, namedtuple)
         :return: a dataset
         :rtype: Dataset object
         """
-        return
+        import collections  # Container datatypes
+
+        # set partitions, data, and metadata
+        for part, data in partitions:
+            setattr(
+                self,
+                part,
+                collections.namedtuple(part.capitalize(), ("data", "labels"))(
+                    data.data, data.labels
+                ),
+            )
+            for field in (f for f in data._fields if f not in {"data", "labels"}):
+                setattr(self, field, getattr(data, field))
+        return None
 
 
 def __getattr__(dataset):
@@ -74,7 +87,6 @@ def load(dataset, out="out/"):
     :return: loaded dataset
     :rtype: namedtuple
     """
-    import collections  # Container datatypes
     import dill  # serialize all of python
     import pathlib  # Object-oriented filesystem paths
 
@@ -88,7 +100,7 @@ def load(dataset, out="out/"):
     # case 1: the partition is specified
     if part and part != "all":
         with open(out / f"{dataset}.pkl", "rb") as f:
-            return dill.load(f)
+            return Dataset([(part, dill.load(f))])
 
     # case 2: the partition is "all"
     elif part and part == "all":
@@ -96,13 +108,13 @@ def load(dataset, out="out/"):
         for part in partitions:
             print(f"Loading {part.stem} partition...")
             with open(part, "rb") as f:
-                datasets.append(dill.load(f))
-        return collections.namedtuple("Dataset", part_stems)(*datasets)
+                datasets.append((part, dill.load(f)))
+        return Dataset(datasets)
 
     # case 3: there is only one partition
     elif len(partitions) == 1:
         with open(*partitions, "rb") as f:
-            return dill.load(f)
+            return Dataset([("dataset", dill.load(f))])
 
     # case 4: train and test are available
     elif all(p in part_stems for p in ("train", "test")):
@@ -110,8 +122,8 @@ def load(dataset, out="out/"):
         for part in ("train", "test"):
             print(f"Loading {part} partition...")
             with open(out / (f"{'-'.join([dataset, part])}.pkl"), "rb") as f:
-                datasets.append(dill.load(f))
-        return collections.namedtuple("Dataset", ("train", "test"))(*datasets)
+                datasets.append((part, dill.load(f)))
+        return Dataset(datasets)
 
     # case 5: the pickle was not found
     raise FileNotFoundError(f"{dataset} not found in '{out}'! (Is it downloaded?)")
