@@ -34,7 +34,9 @@ def analyze(dataframe, labelframe, name, outdir=pathlib.Path("out/")):
 
     # (1) compute basic dataset statistics
     print("Computing dataset statistics...")
-    fig = statistics(dataframe, name, figsize=(10, len(dataframe.columns) / 5))
+    cols = 10
+    rows = len(dataframe.columns) / 5
+    fig = statistics(dataframe, name, rows=rows, cols=cols)
     print(f"Statistics computed! Saving as {name}_statistics.pdf...")
     fig.savefig(outdir / f"{name}_statistics.pdf", bbox_inches="tight")
 
@@ -99,7 +101,7 @@ def histogram(dataframe, labelframe, name, rows, cols):
     label_idxs = [labelframe == label for label in sorted_classes]
 
     # compute feature histogram (plot most common class first)
-    row_size = min(int(2**14 // plt.figure().get_dpi()), rows)
+    row_size = min(int(2**15 // plt.figure().get_dpi()), rows)
     plt.close("all")
     fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 2 * row_size))
     for idx, (feature, min_val, max_val, ax) in enumerate(
@@ -195,7 +197,9 @@ def print(*args, **kwargs):
     return builtins.print(f"[{time.asctime()}]", *args, **kwargs)
 
 
-def statistics(dataframe, name, figsize, colors=np.array(["snow", "lightsteelblue"])):
+def statistics(
+    dataframe, name, rows, cols, colors=np.array(["snow", "lightsteelblue"])
+):
     """
     This function computes basic dataset statistics via pandas decribe
     method.
@@ -204,8 +208,10 @@ def statistics(dataframe, name, figsize, colors=np.array(["snow", "lightsteelblu
     :type dataframe: pandas dataframe
     :param name: figure title
     :type name: str
-    :param figsize: figure size in inches (width by length)
-    :type figsize: tuple of floats
+    :param rows: number of subplot rows
+    :type rows: int
+    :param cols: number of subplot columns
+    :type cols: int
     :param colors: alternating colors for each row in the table
     :type colors: numpy array of str
     :return: plot-ready statistics table
@@ -221,7 +227,8 @@ def statistics(dataframe, name, figsize, colors=np.array(["snow", "lightsteelblu
     feat_nums = [f"{f}: {i}" for i, f in enumerate(statsframe.index)]
     repeats = -(-len(statsframe) // len(colors))
     row_col = np.tile(colors, repeats)[: len(statsframe)]
-    fig, axes = plt.subplots(figsize=figsize)
+    rows = min(int(2**15 // plt.figure().get_dpi()), rows)
+    fig, axes = plt.subplots(figsize=(cols, rows))
     axes.axis("off")
     table = axes.table(
         cellText=statsframe.values,
