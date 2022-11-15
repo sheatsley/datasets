@@ -45,22 +45,26 @@ Argument   | Description
 
 ## Example usage
 
-Below are some commands you may find useful for running this repo:
+There are two ways to use this repo: you can install an editable version of the
+repo with `pip install -e .` (which I recommend), or you can simply clone the
+repo and call all subsequent commands via `python3 __init__.py`. Below are some
+commands you may find useful for running this repo (assuming installed with
+`pip`):
 
-    python3 mlds.py mnist -t
+    mlds mnist -t
 
 This downloads MNIST and applies the transformations found in `templates.py`;
 features are normalized between 0-1 and the dataset is saved as `mnist` to
 `out/`.
 
-    python3 mlds.py fashionmnist -f all -s minmaxscaler standardscaler -n fmnist_mms fmnist_ssc --outdir transformations
+     mlds fashionmnist -f all -s minmaxscaler standardscaler -n fmnist_mms fmnist_ssc --outdir transformations
 
 This downloads fashion-MNIST and creates two copies of the dataset: one where
 all features are normalized between 0-1 and another where features are
 standardized. The transformed datasets are named `fmnist_mms` & `fmnist_ssc`,
 respectively, and both are saved in a folder called `transformations`.
 
-    python3 mlds.py nslkdd -f all -f protocol_type service flag -s minmaxscaler -s onehotencoder -l labelencoder
+    mlds nslkdd -f all -f protocol_type service flag -s minmaxscaler -s onehotencoder -l labelencoder
 
 This downloads the NSL-KDD and creates one copy of the dataset:
 `protocol_type`, `service`, and `flag` features are one-hot encoded, while the
