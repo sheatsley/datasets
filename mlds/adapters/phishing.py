@@ -41,8 +41,8 @@ class Phishing(baseadapter.BaseAdapter):
 
         # metadata to retrieve the dataset
         self.url = (
-            "https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/"
-            "2c3b3b4e-cec8-4094-8f0d-b69e6f1234d5"
+            "https://data.mendeley.com/public-files/datasets/h3cgnj8hft/files/"
+            "84a399ef-c57e-4ee6-9207-7bffb5ace261/file_downloaded"
         )
         return None
 
