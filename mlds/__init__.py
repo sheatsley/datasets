@@ -9,6 +9,9 @@ Author: Ryan Sheatsley
 Mon Apr 4 2022
 """
 
+# TODO
+# complete tensor method for Dataset class
+
 
 class Dataset:
     """
@@ -24,11 +27,13 @@ class Dataset:
     :func:`tensor`: creates a tensor from a numpy array
     """
 
-    def __init__(self, partitions):
+    def __init__(self, name, partitions):
         """
         This method instantiates Dataset objects and builds a representation
         from the paired metadata.
 
+        :param name: dataset name (i.e., filename)
+        :type name: str
         :param partitions: the loaded data partitions
         :type partitions: list of tuples of form: (partition, namedtuple)
         :return: a dataset
@@ -36,7 +41,7 @@ class Dataset:
         """
         import collections  # Container datatypes
 
-        # set partitions, data, and metadata
+        # set partitions and data
         for part, data in partitions:
             setattr(
                 self,
@@ -47,7 +52,34 @@ class Dataset:
             )
             for field in (f for f in data._fields if f not in {"data", "labels"}):
                 setattr(self, field, getattr(data, field))
+
+        # build representation from name and metadata
+        samples, features, classes = zip(
+            *[
+                (
+                    f"{part}={data.data.shape[0]}",
+                    data.data.shape[1],
+                    len(set(data.labels)),
+                )
+                for part, data in partitions
+            ]
+        )
+        transformations = ", ".join(self.transformations)
+        self.name = (
+            f"{name}(samples={samples}, features={features[0]}, "
+            f"classes={classes[0]}, transformations=({transformations}))"
+        )
         return None
+
+    def __repr__(self):
+        """
+        This method returns a string-based representation of useful metadata
+        for debugging.
+
+        :return: dataset statistics
+        :rtype: str
+        """
+        return self.name
 
 
 def __getattr__(dataset):
@@ -100,7 +132,7 @@ def load(dataset, out="out/"):
     # case 1: the partition is specified
     if part and part != "all":
         with open(out / f"{dataset}.pkl", "rb") as f:
-            return Dataset([(part, dill.load(f))])
+            return Dataset(data, [(part, dill.load(f))])
 
     # case 2: the partition is "all"
     elif part and part == "all":
@@ -109,12 +141,12 @@ def load(dataset, out="out/"):
             print(f"Loading {part.stem} partition...")
             with open(part, "rb") as f:
                 datasets.append((part, dill.load(f)))
-        return Dataset(datasets)
+        return Dataset(data, datasets)
 
     # case 3: there is only one partition
     elif len(partitions) == 1:
         with open(*partitions, "rb") as f:
-            return Dataset([("dataset", dill.load(f))])
+            return Dataset(data, [("dataset", dill.load(f))])
 
     # case 4: train and test are available
     elif all(p in part_stems for p in ("train", "test")):
@@ -123,7 +155,7 @@ def load(dataset, out="out/"):
             print(f"Loading {part} partition...")
             with open(out / (f"{'-'.join([dataset, part])}.pkl"), "rb") as f:
                 datasets.append((part, dill.load(f)))
-        return Dataset(datasets)
+        return Dataset(data, datasets)
 
     # case 5: the pickle was not found
     raise FileNotFoundError(f"{dataset} not found in '{out}'! (Is it downloaded?)")
