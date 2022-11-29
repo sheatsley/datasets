@@ -9,9 +9,6 @@ Author: Ryan Sheatsley
 Mon Apr 4 2022
 """
 
-# TODO
-# complete tensor method for Dataset class
-
 
 class Dataset:
     """
@@ -24,7 +21,6 @@ class Dataset:
 
     :func:`__init__`: prepares loaded data
     :func:`__repr__`: shows useful dataset statistics
-    :func:`tensor`: creates a tensor from a numpy array
     """
 
     def __init__(self, name, partitions):
