@@ -60,9 +60,10 @@ class Dataset:
                 for part, data in partitions
             ]
         )
+        samples = ", ".join(samples)
         transformations = ", ".join(self.transformations)
         self.name = (
-            f"{name}(samples={samples}, features={features[0]}, "
+            f"{name}(samples=({samples}), features={features[0]}, "
             f"classes={classes[0]}, transformations=({transformations}))"
         )
         return None
