@@ -196,8 +196,8 @@ def save(
         f"Casting data to {data_precision.__name__}",
         f"and labels to {label_precision.__name__}...",
     )
-    data = data.astype(data_precision, copy=False)
-    labels = labels.astype(label_precision, copy=False)
+    data = data.astype(data_precision, order="C")
+    labels = labels.astype(label_precision, order="C")
 
     # populate a dataset object
     print("Populating dataset object...")
