@@ -108,6 +108,6 @@ if __name__ == "__main__":
     print(f"Downloading, transforming, and analyzing {len(templates)} datasets...")
     for idx, dataset in enumerate(templates, start=1):
         print(f"On {dataset} ({idx} of {len(templates)})...")
-        sys.argv = f"mlds.py {dataset} -ta{'d' if dataset in non_imgs else ''}".split()
+        sys.argv = f"mlds {dataset} -ta{'d' if dataset in non_imgs else ''}".split()
         datasets.main(**arguments.validate_args())
     raise SystemExit(0)
