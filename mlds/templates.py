@@ -38,19 +38,19 @@ class Templates:
         "features": [["all"]],
         "labels": [transform.Transformer.identity],
         "names": ["cifar10"],
-        "schemes": [[transform.Transformer.minmaxscaler]],
+        "schemes": [[transform.Transformer.uniformscaler]],
     }
     fashionmnist = {
         "features": [["all"]],
         "labels": [transform.Transformer.identity],
         "names": ["fmnist"],
-        "schemes": [[transform.Transformer.minmaxscaler]],
+        "schemes": [[transform.Transformer.uniformscaler]],
     }
     mnist = {
         "features": [["all"]],
         "labels": [transform.Transformer.identity],
         "names": ["mnist"],
-        "schemes": [[transform.Transformer.minmaxscaler]],
+        "schemes": [[transform.Transformer.uniformscaler]],
     }
     nslkdd = {
         "features": [["all"], ["protocol_type", "service", "flag"]],
