@@ -144,12 +144,13 @@ class Transformer:
     :func:`apply`: applies transformation schemes to the data
     :func:`export`: correctly concatenates transformations to the original data
     :func:`destupefy`: automagic data cleaning (experimental)
+    :func:`identity`: no-op (return data unchanged)
     :func:`labelencoder`: encode target labels between 0 and n_classses-1
-    :func:`minmaxscaler`: scale features to a given range
+    :func:`minmaxscaler`: scale each feature to a given range
     :func:`onehotencoder`: encode categorical features as one-hot arrays
-    :func:`raw`: no-op (return data unchanged)
     :func:`robustscaler`: scale features with statistics robust to outliers
     :func:`standardscaler`: standardize features to zero mean and unit variance
+    :func:`uniformscaler`: scale all features to a given range
     """
 
     def __init__(self, features, labels, schemes):
@@ -185,6 +186,9 @@ class Transformer:
         self.mms = sklearn.preprocessing.MinMaxScaler()
         self.rs = sklearn.preprocessing.RobustScaler()
         self.ss = sklearn.preprocessing.StandardScaler()
+        self.us = sklearn.preprocessing.FunctionTransformer(
+            lambda x: (x - x.min()) / (x.max() - x.min())
+        )
         return None
 
     def apply(self, data, labels, fit=True):
@@ -210,7 +214,7 @@ class Transformer:
         self.data_transforms = []
         self.label_transforms = []
 
-        # save feature names for export later & pass untouched features to raw
+        # save feature names for export later & pass untouched features to identity
         self.feature_names = data.columns.tolist()
         untransformed_feat = list(set(self.feature_names).difference(*self.features))
         if untransformed_feat:
@@ -440,6 +444,25 @@ class Transformer:
         """
         print(f"Applying standard scaling to data of shape {data.shape}...")
         return self.ss.fit_transform(data) if fit else self.ss.transform(data)
+
+    def uniformscaler(self, data, fit):
+        """
+        This method is functionally similar to scikit-learn's MinMaxScaler with
+        one exception: scikit-learn's MinMaxScaler scales features
+        individually, while this method scales all features by the absolute max
+        and minimum observed. This is appropriate when all features are
+        semantically the same, such as pixels in images.
+
+        :param data: the data to transform
+        :type data: pandas dataframe
+        :param fit: whether the transformer should fit before transforming
+        :type fit: bool
+        :return: transformed data
+        :rtype: numpy array
+        """
+        print(f"Applying uniform min-max scaling to data of shape {data.shape}...")
+        data = data.to_numpy()
+        return self.us.fit_transform(data) if fit else self.us.transform(data)
 
 
 if __name__ == "__main__":
