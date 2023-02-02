@@ -22,6 +22,8 @@ setuptools.setup(
     description="Scripts & an API for working with machine learning datasets",
     entry_points={"console_scripts": "mlds=mlds:main"},
     install_requires=[
+        "numpy",
+        "matplotlib",
         "pandas",
         "requests",
         "scikit-learn",
@@ -36,5 +38,5 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     python_requires=">=3.8",
     url="https://github.com/sheatsley/datasets",
-    version="3.0.0a1",
+    version="3.0.1",
 )
