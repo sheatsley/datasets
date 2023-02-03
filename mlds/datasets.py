@@ -13,6 +13,9 @@ import mlds.retrieve as retrieve  # Download machine learning datasets
 import mlds.transform as transform  # Order-preserving data transformations
 import mlds.utilities as utilities  # Miscellaneous helper functions
 from mlds.utilities import print  # Timestamped printing
+import subprocess  # Subprocess management
+
+# import modules
 
 
 def main(
@@ -201,7 +204,10 @@ def save(
 
     # populate a dataset object
     print("Populating dataset object...")
-    dataset = utilities.assemble(data, labels, metadata)
+    version = subprocess.check_output(
+        ("git", "rev-parse", "--short", "HEAD"), text=True
+    ).strip()
+    dataset = utilities.assemble(data, labels, metadata | {"version": version})
 
     # save the results to disk
     print(f"Pickling dataset & writing {name}.pkl to {outdir}/...")
