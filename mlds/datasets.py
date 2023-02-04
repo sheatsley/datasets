@@ -15,8 +15,6 @@ import mlds.utilities as utilities  # Miscellaneous helper functions
 from mlds.utilities import print  # Timestamped printing
 import subprocess  # Subprocess management
 
-# import modules
-
 
 def main(
     analytics,
