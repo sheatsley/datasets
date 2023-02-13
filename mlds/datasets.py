@@ -203,7 +203,8 @@ def save(
     # populate a dataset object
     print("Populating dataset object...")
     version = subprocess.check_output(
-        ("git", "rev-parse", "--short", "HEAD"), text=True
+        ("git", "-C", __file__.rstrip("datasets.py"), "rev-parse", "--short", "HEAD"),
+        text=True,
     ).strip()
     dataset = utilities.assemble(data, labels, metadata | {"version": version})
 
