@@ -1,7 +1,7 @@
 """
 This module defines the main entry point for the machine learning datasets
 repo. Transforming machine learning datasets into useful representations
-requires a substantially large toolset (i..e, imports), while reading
+requires a substantially large toolset (i.e, imports), while reading
 transformed datasets should be as fast as possible. To support these
 paradigms, this module segments which dependencies are loaded based
 on whether data is to be transformed or simply retrieved.
@@ -89,17 +89,35 @@ def __getattr__(dataset):
     :param dataset: the dataset to retrieve arguments from
     :type dataset: string; one of the method defined below
     :return: complete dataset with metadata
-    :rtype: namedtuple object
+    :rtype: named tuple object or set of str
     """
     if dataset == "__path__":
         raise AttributeError
-    return load(dataset.lower())
+    elif dataset == "__available__":
+        return available()
+    else:
+        return load(dataset.lower())
+
+
+def available(out="out/"):
+    """
+    This function searches for pickled datasets within out and returns their
+    names.
+
+    :param out: directory where datasets are saved
+    :type out: str
+    :return: available datasets
+    :rtype: set of str
+    """
+    import glob  # Unix style pathname pattern expansion
+
+    return set(p.split("/")[-1].split("-")[0] for p in glob.glob(out + "*.pkl"))
 
 
 def load(dataset, out="out/"):
     """
     This function is the main entry point from datasets that been proccessed
-    and saved by MLDS. It depickles saved data, and returns the namedtuple
+    and saved by MLDS. It depickles saved data, and returns the named tuple
     structure defined in the utilities module (i.e., the assemble function).
     Importantly, loading datasets executes the following based on the dataset
     arugment (parsed as {dataset}-{partition}): (1) if the partition is
@@ -112,9 +130,9 @@ def load(dataset, out="out/"):
     :param dataset: the dataset to load
     :type dataset: str
     :param out: directory where the dataset is saved
-    :type out: pathlib path
+    :type out: str
     :return: loaded dataset
-    :rtype: namedtuple
+    :rtype: named tuple object
     """
     import dill  # serialize all of python
     import pathlib  # Object-oriented filesystem paths
