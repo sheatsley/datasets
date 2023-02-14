@@ -182,7 +182,7 @@ class Transformer:
         # instantiate transformers to support transforms for test set
         self.ds = Destupefier()
         self.le = sklearn.preprocessing.LabelEncoder()
-        self.ohe = sklearn.preprocessing.OneHotEncoder(sparse=False)
+        self.ohe = sklearn.preprocessing.OneHotEncoder(sparse_output=False)
         self.mms = sklearn.preprocessing.MinMaxScaler()
         self.rs = sklearn.preprocessing.RobustScaler()
         self.ss = sklearn.preprocessing.StandardScaler()
