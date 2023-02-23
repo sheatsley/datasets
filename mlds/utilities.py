@@ -245,11 +245,3 @@ def statistics(
     axes.set_title(f"{name} Dataset Statistics\n")
     fig.tight_layout()
     return fig
-
-
-if __name__ == "__main__":
-    """
-    This runs some basic unit tests with the functions defined in this module
-    """
-    print("Test string with implicit date.")
-    raise SystemExit(0)

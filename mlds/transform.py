@@ -78,7 +78,6 @@ class Destupefier(sklearn.base.TransformerMixin):
         # only identify columns to remove in non-test partitions
         org_rows, org_cols = dataset.shape
         if fit:
-
             # test 1: removing invalid values from min(rows, cols)
             print(f"Scanning {dataset.size} values for invalids...")
             dataset.replace(self.unknowns, None, inplace=True)
@@ -100,7 +99,6 @@ class Destupefier(sklearn.base.TransformerMixin):
             dataset.drop(columns=dup_features, inplace=True)
             self.rm_features = self.rm_features.union(dup_features)
         else:
-
             # test 1, 2 & 4: drop features dropped in non-test partitions
             print(f"Dropping {len(self.rm_features)} features from test set...")
             dataset.drop(columns=self.rm_features, inplace=True)
@@ -121,7 +119,6 @@ class Destupefier(sklearn.base.TransformerMixin):
         labels.drop(labels.index[dup_samples], inplace=True)
         labels.reset_index(drop=True, inplace=True)
         if fit:
-
             # test 4: single-value column removal
             print(f"Scanning {len(dataset.columns)} features for single values...")
             single_features = dataset.columns[dataset.nunique() == 1]
@@ -259,7 +256,6 @@ class Transformer:
             itertools.product(*self.schemes),
             itertools.product(*self.data_transforms),
         ):
-
             # assemble the dataframe in the original order
             scheme_names = [s.__name__ for s in scheme_list]
             print(f"Exporting {'×'.join(scheme_names)}...")
@@ -267,7 +263,6 @@ class Transformer:
             for features, scheme, transform in zip(
                 feature_list, scheme_list, transform_list
             ):
-
                 # check if the scheme expanded the features
                 if len(features) != len(transform.T):
                     print(f"{scheme.__name__} expanded features! Correcting...")
@@ -463,8 +458,3 @@ class Transformer:
         print(f"Applying uniform min-max scaling to data of shape {data.shape}...")
         data = data.to_numpy()
         return self.us.fit_transform(data) if fit else self.us.transform(data)
-
-
-if __name__ == "__main__":
-    """ """
-    raise SystemExit(0)
