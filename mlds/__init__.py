@@ -9,6 +9,13 @@ Author: Ryan Sheatsley
 Mon Apr 4 2022
 """
 
+# TODO
+# add GTSRB
+# add unit tests
+# augment tensorflow parser to include structured data (generalize image key)
+# convert dataset definitions from strings to callables
+# rework __init__
+
 
 class Dataset:
     """
@@ -99,7 +106,7 @@ def __getattr__(dataset):
         return load(dataset.lower())
 
 
-def available(out="out/"):
+def available(out=__path__[0] + "/out/"):
     """
     This function searches for pickled datasets within out and returns their
     names.
@@ -132,7 +139,7 @@ def load(dataset, out="out/"):
     :param out: directory where the dataset is saved
     :type out: str
     :return: loaded dataset
-    :rtype: named tuple object
+    :rtype: namedtuple object
     """
     import dill  # serialize all of python
     import pathlib  # Object-oriented filesystem paths
