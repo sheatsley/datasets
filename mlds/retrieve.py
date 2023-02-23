@@ -9,11 +9,6 @@ import pandas  # Python Data Analysis Library
 import torchvision  # Datasets, transforms and Models specific to Computer Vision
 import tensorflow_datasets  # A collection of ready-to-use datasets
 
-# TODO
-# add unit tests
-# augment tensorflow parser to include structured data (generalize image key)
-# convert dataset definitions from strings to callables
-
 
 class Downloader:
     """
@@ -615,8 +610,3 @@ class Downloader:
             }
             for part in ("train", "test")
         }
-
-
-if __name__ == "__main__":
-    """ """
-    raise SystemExit(0)
