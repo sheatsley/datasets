@@ -38,5 +38,5 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     python_requires=">=3.8",
     url="https://github.com/sheatsley/datasets",
-    version="3.0.1",
+    version="3.2",
 )
