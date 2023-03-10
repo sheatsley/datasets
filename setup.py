@@ -3,7 +3,7 @@ Build script for Machine Learning Datasets
 Author: Ryan Sheatsley
 Date: Thu Jun 2 2022
 """
-import setuptools  # Easily download, build, install, upgrade, and uninstall Python packages
+import setuptools
 
 with open("README.md", "r") as f:
     long_description = f.read()
