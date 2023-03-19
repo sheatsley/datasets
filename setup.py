@@ -22,6 +22,7 @@ setuptools.setup(
     description="Scripts & an API for working with machine learning datasets",
     entry_points={"console_scripts": "mlds=mlds:main"},
     install_requires=[
+        "dill",
         "numpy",
         "matplotlib",
         "pandas",
