@@ -141,8 +141,9 @@ def load(dataset, out="out/"):
     :return: loaded dataset
     :rtype: namedtuple object
     """
-    import dill  # serialize all of python
     import pathlib  # Object-oriented filesystem paths
+
+    import dill  # serialize all of python
 
     # check if a partition is specified
     out = pathlib.Path(__file__).parent / "out/" if out == "out/" else pathlib.Path(out)
