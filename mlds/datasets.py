@@ -207,7 +207,7 @@ def save(
         ("git", "-C", __file__.rstrip("datasets.py"), "rev-parse", "--short", "HEAD"),
         text=True,
     ).strip()
-    dataset = utilities.assemble(data, labels, metadata | {"__version__": version})
+    dataset = utilities.assemble(data, labels, metadata | {"version": version})
 
     # save the results to disk
     print(f"Pickling dataset & writing {name}.pkl to {outdir}/...")
