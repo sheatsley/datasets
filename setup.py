@@ -36,8 +36,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     keywords="machine-learning numpy datasets",
     name="mlds",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_namespace_packages(),
+    package_data={"mlds.out": ["*.pkl"]},
     python_requires=">=3.8",
     url="https://github.com/sheatsley/datasets",
-    version="3.2",
+    version="3.3",
 )
