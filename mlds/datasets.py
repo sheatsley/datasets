@@ -6,14 +6,16 @@ resultant arrays to disk.
 Author: Ryan Sheatsley
 Mon Feb 28 2022
 """
+import pathlib  # Object-oriented filesystem paths
+import subprocess  # Subprocess management
+
 import dill  # serialize all of python
 import numpy as np  # The fundamental package for scientific computing with Python
-import pathlib  # Object-oriented filesystem paths
+
 import mlds.retrieve as retrieve  # Download machine learning datasets
 import mlds.transform as transform  # Order-preserving data transformations
 import mlds.utilities as utilities  # Miscellaneous helper functions
 from mlds.utilities import print  # Timestamped printing
-import subprocess  # Subprocess management
 
 
 def main(
@@ -110,7 +112,6 @@ def main(
         for (transformed_data, transformed_labels, transformations), name in zip(
             transformer.export(), names
         ):
-
             # if applicable, destupefy
             transformed_data, transformed_labels = (
                 transformer.destupefy(
@@ -206,7 +207,7 @@ def save(
         ("git", "-C", __file__.rstrip("datasets.py"), "rev-parse", "--short", "HEAD"),
         text=True,
     ).strip()
-    dataset = utilities.assemble(data, labels, metadata | {"version": version})
+    dataset = utilities.assemble(data, labels, metadata | {"__version__": version})
 
     # save the results to disk
     print(f"Pickling dataset & writing {name}.pkl to {outdir}/...")
