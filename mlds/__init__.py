@@ -15,6 +15,7 @@ Mon Apr 4 2022
 # augment tensorflow parser to include structured data (generalize image key)
 # convert dataset definitions from strings to callables
 # rework __init__
+# switch from namedtuple to type
 
 
 class Dataset:
