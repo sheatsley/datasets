@@ -1,90 +1,58 @@
 """
-This module defines the main logic for the machine learning datasets repo. It
-consists of (1) parsing arguments, (2) retrieving datasets, (3) feature scaling
-applications, (4) one-hot, label, & integer encoding, and (5) writing the
-resultant arrays to disk.
-Author: Ryan Sheatsley
-Mon Feb 28 2022
+This module defines the core for the machine learning datasets repo. It defines
+interfaces for (1) parsing command-line arguments, (2) retrieving datasets, (3)
+applying feature and label transformations, (4) and writing data to disk.
 """
-import pathlib  # Object-oriented filesystem paths
-import subprocess  # Subprocess management
+import pathlib
+import subprocess
 
-import dill  # serialize all of python
-import numpy as np  # The fundamental package for scientific computing with Python
+import numpy as np
 
-import mlds.retrieve as retrieve  # Download machine learning datasets
-import mlds.transform as transform  # Order-preserving data transformations
-import mlds.utilities as utilities  # Miscellaneous helper functions
-from mlds.utilities import print  # Timestamped printing
+import mlds.adapters as adapters
+import mlds.transform as transform
+import mlds.utilities as utilities
 
 
-def main(
-    analytics,
+def process(
     dataset,
     destupefy,
     features,
     labels,
     names,
     outdir,
-    precision,
     schemes,
 ):
     """
-    This function represents the heart of Machine Learning Datasets (MLDS).
-    Given a dataset, a list of features, a list of label transformations, a
-    list of output names, an output directory, numerical precision, a list of
-    data transformation schemes, and whether to produce resultant analyitcs and
-    apply (experimental) destupefication subroutines, MLDS will perform the
-    following steps:
+    This function serves as a wrapper for the main interfaces of this repo.
+    Specifically, this function: (1) retrieves datasets from the adapter
+    package, (2) transforms (and optionally cleans) the data via the transform
+    module, and (3) saves the data to disk.
 
-        (1) Retrieve the dataset from either torchvision, tensorflow_datasets,
-            or a custom dataset (found in the adapaters directory).
-        (2) Apply transformations to specific features and reassmble the
-            dataset is in the original order.
-        (3) Optionally clean the data and produce basic statistics.
-        (4) Save the dataset in the specified output directory with
-            the specified name in the specified precision.
-
-    Practically speaking, this function mediates interactions between
-    Downloader and Transformer objects, while saving data so that it can be
-    readily retrieved by the load function in this module.
-
-    :param analytics: whether analytics are computed and saved
-    :type analytics: bool
     :param dataset: dataset to download
     :type dataset: str
-    :param destupefy: whether data cleaning is performed (experimental)
+    :param destupefy: whether to clean the data (experimental)
     :type destupefy: bool
     :param features: features to manipulate
-    :type features: tuple of tuples containing str
+    :type features: tuple of tuples of strs
     :param labels: transformations to apply to the labels
     :type labels: tuple of tuples of Transformer callables
     :param names: filenames of the saved datasets
-    :type names: tuple of str
-    :param outdir: ouput directory of saved datasets
-    :type outdir: pathlib path
-    :param precision: dataset precision
-    :type precision: numpy type
+    :type names: tuple of strs
     :param schemes: transformations to apply to the data
     :type schemes: tuple of tuples of Transformer callables
     :return: None
     :rtype: NoneType
     """
 
-    # instantiate Downloader and download the dataset
-    print(f"Instantiating Downloader & downloading {dataset}...")
-    downloader = retrieve.Downloader(dataset)
-    data = downloader.download()
+    # retrieve the dataset and get feature names (to resolve "all" argument)
+    print(f"Retrieving {dataset}...")
+    data = getattr(adapters, dataset).retrieve()
+    partition = next(iter(data))
+    feature_names = data[partition]["data"].columns
+    print(f"Inferred {len(feature_names)} features from {partition} partition.")
 
-    # get features (needed for "all" keyword) from first data partition
-    part = next(iter(data))
-    feat_names = data[part]["data"].columns
-    orgfshape = data.get("fshape", (len(feat_names),))
-    data.pop("fshape", None)
-    print(f"Inferred {len(feat_names)} features from {part} partition.")
-
-    # resovle "all" keyword to feature names minus those used in one-hot encoding
-    print("Resolving 'all' keyword with inferred features...")
+    # map "all" keyword to all features except those that are one-hot encoded
+    print("Resolving 'all' argument with inferred features...")
     ohot_features = [
         feature
         for scheme, feature_list in zip(schemes, features)
@@ -224,3 +192,22 @@ def save(
         outdir,
     ) if analytics else None
     return None
+
+
+def assemble(x, y, metadata={}):
+    """
+    This function populates namedtuples with data & labels, as well as any
+    desired metadata.
+
+    :param x: data samples
+    :type x: numpy array
+    :param y: labels
+    :type y: numpy array
+    :param metadata: metadata to be stored
+    :type metadata: dictionary
+    :return: complete dataset with metadata
+    :rtype: namedtuple object
+    """
+    return collections.namedtuple("Dataset", ["data", "labels", *metadata])(
+        x, y, **metadata
+    )
