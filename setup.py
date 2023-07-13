@@ -43,7 +43,7 @@ setuptools.setup(
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Information Analysis",
     ],
@@ -66,7 +66,7 @@ setuptools.setup(
     name="mlds",
     packages=setuptools.find_packages(),
     package_data={"mlds": ["datasets", "VERSION"]},
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     url="https://github.com/sheatsley/datasets",
     version="4.0",
 )
