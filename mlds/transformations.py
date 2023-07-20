@@ -1,60 +1,36 @@
 """
-The transform module applies transformations to machine learning datasets.
-Author: Ryan Sheatsley
-Tue Feb 15 2022
+This module defines classes for transforming and cleaning datasets.
 """
-import itertools  # Functions creating iterators for efficient looping
-import pandas  # Python Data Analysis Library
-import sklearn.preprocessing  # Preprocessing and Normalization
-from mlds.utilities import print  # Timestamped printing
+import itertools
+
+import pandas
+import sklearn.preprocessing
 
 
 class Destupefier(sklearn.base.TransformerMixin):
     """
-    The Destupefier is an (experimental) stateful transformer, such as those in
+    The Destupefier is a stateful transformer, such as those in
     sklearn.preprocessing module. After dataframes have been assembled, this
-    class "cleans" datasets by attempting to identifiy data deficiencies
-    through a series of checks. At this time, the following is performed (in
-    this order):
+    class "cleans" them by identifying data deficiencies. Specifically, this
+    removes: (1) duplicate columns, (2) duplicate rows, and (3) single-value
+    columns. For duplicate rows and columns, the first occurance is kept.
 
-        (1) Any unknown values are removed (max of columns and rows are kept).
-        (2) Any identical columns are removed (first occurance is kept).
-        (3) Any identical rows are removed (first occurance is kept).
-        (4) Any single-value columns are removed.
+    This class is a stateful transformer as, for datasets that have dedicated
+    training and test sets, the same transformations must be applied to both,
+    regardless if one exhibits a deficiency and the other does not. For
+    example, if a training set has a feature with a single value, then that
+    feature will be removed from both the training and test sets.
 
-    Notably, we subclass sklearn's TransformerMixin (as opposed to using
-    FunctionTransformer directly) for state: if we find, for example, in a
-    training set that a feature has a single value, then that feature will be
-    removed, and thus, the same transformation needs to be applied to a test
-    set (if provided), regardless if the test set has more than one value for
-    that feature (a rather pathelogical scenario).
-
-    Moreover, we do not define a fit method as there are a suite of scenarios
-    where removing columns or rows (based on invalid values, duplicity, etc.)
-    can cause other nonideal scenarios to reappear (such as removing a
-    duplicate row could cause unique columns to become duplicates). Thus,
-    simply identifying definciencies here offers little utility since some can
-    arise as result of addressing others, and so, this method does nothing.
-
-    :func:`__init__`: instantiates Destupifier objects
-    :func:`transform`: identifies & corrects deficiencies
+    :func:`fit`: identifies dataset-wide deficiencies
+    :func:`transform`: corrects dataset-wide and parition-specific deficiencies
     """
 
-    def __init__(self, unknowns=set("")):
+    def fit(self, dataset, labels):
         """
-        This method instantiates Destupefier transformer objects. It accepts a
-        single argument (unknowns), which defines the set of *additional* NA
-        values beyond None and NAN (i.e., data entries that are invalid,
-        unfilled, errornous, etc.), as Pandas already recognizes None and NAN
-        to be invalid values. Such values are removed from the dataframe on
-        transform.
+        This method identifies deficiencies that must be applied to the entire
+        dataset. Specifically, this removes duplicate and single-value columns.
 
-        :param unknowns: additional values to be considered invalid
-        :type unknowns: set of miscellaneous datatypes
-        :return: a Destupefier transformer
-        :rtype: Destupefier object
         """
-        self.unknowns = unknowns
         return None
 
     def transform(self, dataset, labels, fit=True):
@@ -80,7 +56,6 @@ class Destupefier(sklearn.base.TransformerMixin):
         if fit:
             # test 1: removing invalid values from min(rows, cols)
             print(f"Scanning {dataset.size} values for invalids...")
-            dataset.replace(self.unknowns, None, inplace=True)
             na_locs = dataset.isna()
             na_rows = na_locs.any(axis=1).sum() / org_rows
             na_cols = na_locs.any(axis=0).sum() / org_cols
