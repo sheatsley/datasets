@@ -25,86 +25,52 @@ class Destupefier(sklearn.base.TransformerMixin):
     :func:`transform`: corrects dataset-wide and parition-specific deficiencies
     """
 
-    def fit(self, dataset, labels):
+    def fit(self, dataset, _):
         """
         This method identifies deficiencies that must be applied to the entire
-        dataset. Specifically, this removes duplicate and single-value columns.
+        dataset. Specifically, this identifies duplicate and single-value
+        columns.
 
+        :param dataset: the training data to fit to
+        :type dataset: pandas DataFrame object
+        :param _: the training labels to fit to (not used)
+        :type _: pandas Series object
+        :return: fitted Destupefier
+        :rtype: Destupefier object
         """
-        return None
+        print(f"Analyzing {len(dataset.columns)} columns for deficiencies...")
+        duplicates = dataset.columns[dataset.T.duplicated()]
+        singles = dataset.columns[dataset.nunique() == 1]
+        self.deficient_features = set().union(duplicates).union(singles)
+        return self
 
-    def transform(self, dataset, labels, fit=True):
+    def transform(self, dataset, labels):
         """
-        This method identifies the deficiencies above and corrects them.
-        Importantly, some cleaning procedures (such as removing single-value or
-        duplicate features) should be: (1) identically cleaned on the test set,
-        and (2) should not be identified on the test set (to ensure both the
-        training and test sets are homogenous in the feautre space). Due to the
-        fact that some procedures can reveal new deficiencies (described in
-        fit), we must explicitly pass if we are fitting within this method.
+        This method corrects deficiencies identified in fit. Specifically, this
+        removes duplicate and single-value columns, as well as duplicate rows.
+        The first occurance of duplicate rows and columns are kept.
 
-        :param dataset: the dataset to clean
-        :type dataset: pandas dataframe
-        :param labels: associated labels
-        :type labels: pandas series
-        :return: cleaned dataset and labels
-        :rtype: tuple containing a pandas dataframe and numpy array
+        :param dataset: the training data to clean
+        :type dataset: pandas DataFrame object
+        :param labels: the training labels to clean
+        :type labels: pandas Series object
+        :return: cleaned dataset
+        :rtype: tuple of pandas DataFrame and Series objects
         """
-
-        # only identify columns to remove in non-test partitions
-        org_rows, org_cols = dataset.shape
-        if fit:
-            # test 1: removing invalid values from min(rows, cols)
-            print(f"Scanning {dataset.size} values for invalids...")
-            na_locs = dataset.isna()
-            na_rows = na_locs.any(axis=1).sum() / org_rows
-            na_cols = na_locs.any(axis=0).sum() / org_cols
-            print(
-                f"{na_rows:0.1%} of samples and {na_cols:0.1%}",
-                "of features have invalid values. Dropping the minimum...",
-            )
-            na_col_names = dataset.columns[na_locs.any()]
-            dataset.dropna(axis=1 if na_cols < na_rows else 0, inplace=True)
-            self.rm_features = set(na_col_names if na_cols < na_rows else [])
-
-            # test 2: identical column removal
-            print(f"Scanning {len(dataset.columns)} features for duplicates...")
-            dup_features = dataset.columns[dataset.T.duplicated()]
-            print(f"Dropping {len(dup_features)} duplicate features...")
-            dataset.drop(columns=dup_features, inplace=True)
-            self.rm_features = self.rm_features.union(dup_features)
-        else:
-            # test 1, 2 & 4: drop features dropped in non-test partitions
-            print(f"Dropping {len(self.rm_features)} features from test set...")
-            dataset.drop(columns=self.rm_features, inplace=True)
-
-            # test ≈1: remove invalid values from rows only for test set
-            print(f"Scanning {dataset.size} values for invalids...")
-            dataset.replace(self.unknowns, None, inplace=True)
-            na_rows = dataset.isna().any(axis=1).sum()
-            print(f"Dropping {na_rows} samples with invalid values...")
-            dataset.dropna(axis=0, inplace=True)
-
-        # test 3: identical row removal (also remove from labels)
+        print(f"Dropping {len(self.deficient_features)} deficient features...")
+        dataset.drop(columns=self.deficient_features, inplace=True)
         print(f"Scanning {len(dataset)} samples for duplicates...")
-        dup_samples = dataset.duplicated()
-        print(f"Dropping {dup_samples.sum()} duplicate samples...")
-        dataset.drop(index=dataset.index[dup_samples], inplace=True)
-        dataset.reset_index(drop=True, inplace=True)
-        labels.drop(labels.index[dup_samples], inplace=True)
-        labels.reset_index(drop=True, inplace=True)
-        if fit:
-            # test 4: single-value column removal
-            print(f"Scanning {len(dataset.columns)} features for single values...")
-            single_features = dataset.columns[dataset.nunique() == 1]
-            print(f"Dropping {len(single_features)} single-valued features...")
-            dataset.drop(columns=single_features, inplace=True)
-            self.rm_features = self.rm_features.union(single_features)
+        duplicates = dataset.duplicated()
+        dataset.drop(index=dataset.index[duplicates], inplace=True)
+        dataset.reset_index(inplace=True)
+        labels.drop(labels.index[duplicates], inplace=True)
+        labels.reset_index(inplace=True)
         return dataset, labels
 
 
 class Transformer:
     """
+    The Transformer class augments 
     This Transformer class servs as an intelligent wrapper for scikit-learn's
     data transformation functions. Notably, the transformers (and
     ColumnTransformer compositions) do not implicitly preserve the order of
@@ -163,7 +129,7 @@ class Transformer:
         )
         return None
 
-    def apply(self, data, labels, fit=True):
+    def apply(self, data, fit, labels):
         """
         This method applies sckilit-learn data transformations, while
         preserving the original layout of the data. Importantly, this method
