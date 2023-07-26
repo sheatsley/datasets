@@ -9,7 +9,7 @@ import mlds.downloaders
 import pandas
 
 
-def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force_download=False):
+def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
     """
     This function downloads, preprocesses, and saves the NSL-KDD dataset
     (https://www.unb.ca/cic/datasets/nsl.html). Specifically, this: (1)
@@ -105,7 +105,8 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force_download=False):
 
     # retrieve dataset, get feature names, drop last column, and fix labels
     dataset = {}
-    download = mlds.downloaders.download(directory, urls, force_download)
+    download = mlds.downloaders.download(directory=directory, force=force, urls=urls)
+    _, download = download.popitem()
     print("Processing the NSL-KDD...")
     with zipfile.ZipFile(io.BytesIO(download)) as zipped:
         with io.TextIOWrapper(zipped.open(feature_file)) as datafile:
