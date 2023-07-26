@@ -5,12 +5,12 @@ applying feature and label transformations, (4) and writing data to disk.
 """
 import argparse
 import pathlib
-import pickle
 
+import dill
+import pandas
 import sklearn.compose
 
 import mlds
-import mlds.adapters as adapters
 import mlds.transformations as transformations
 
 
@@ -45,15 +45,12 @@ class Dataset:
         :return: a dataset
         :rtype: Dataset object
         """
-        samples = []
         for partition, data in datadict.items():
-            setattr(self, partition, type("Partition", (), data))
-            self.classes = len(set(data["labels"]))
-            partition_samples, self.features = data["data"].shape
-            samples.append(partition_samples)
+            data["classes"] = len(set(data["labels"]))
+            data["samples"], data["features"] = data["data"].shape
+            setattr(self, partition, type("Partition", (), data)())
         self.dataset = dataset
         self.metadata = metadata
-        self.samples = ", ".join(samples)
         return None
 
     def __repr__(self):
@@ -64,9 +61,15 @@ class Dataset:
         :return: dataset statistics
         :rtype: str
         """
+        samples = ", ".join([f"{getattr(self, p).samples}" for p in self.partitions])
+        features = ", ".join([f"{getattr(self, p).features}" for p in self.partitions])
+        classes = ", ".join([f"{getattr(self, p).classes}" for p in self.partitions])
         return (
-            f"{self.dataset}(samples=({self.samples}), features={self.features}, "
-            f"classes={self.classes}, transformations=({transformations}))"
+            f"{self.dataset}(samples=({samples}), features={features}, "
+            f"classes={classes}, "
+            f"partitions=({', '.join(self.metadata['partitions'])}), "
+            f"transformations=({', '.join(self.metadata['transformations'])}), "
+            f"version={self.metadata['version']})"
         )
 
 
@@ -86,7 +89,7 @@ def command_line():
     )
     parser.add_argument(
         "dataset",
-        choices=mlds.__available__,
+        choices=mlds.downloaders.__all__,
         help="Dataset to retrieve and process",
     )
     parser.add_argument(
@@ -100,9 +103,8 @@ def command_line():
         action="append",
         default=[],
         help="features-transformation pairs (supports feature names, indices, & 'all')",
-        metavar=("FEATURE_1,FEATURE_2,...,FEATURE_N", "TRANSFORMATION"),
+        metavar="FEATURE_1,FEATURE_2,...,FEATURE_N DATA_TRANSFORMATION",
         nargs=2,
-        type=lambda d: getattr(transformations, d),
     )
     parser.add_argument(
         "--filename",
@@ -113,6 +115,7 @@ def command_line():
         "-l",
         "--labels",
         choices=(getattr(transformations, d) for d in ("LabelEncoder",)),
+        default=sklearn.preprocessing.FunctionTransformer,
         help="label transformation to apply",
         metavar="LABEL_TRANSFORMATION",
         type=lambda d: getattr(transformations, d),
@@ -120,8 +123,8 @@ def command_line():
     parser.add_argument(
         "--version",
         action="version",
-        help="Displays module version",
-        version="4.0",
+        help="Displays package version",
+        version=mlds.__version__,
     )
     args = parser.parse_args()
 
@@ -130,21 +133,22 @@ def command_line():
         t = [t for _, t in args.features]
         args.filename = f"{args.dataset}_{'_'.join(t)}_{args.labels.__name__}"
 
-    # map transformations to transformations module callables
+    # map transformations to transformations module classes
+    valid_transforms = set(
+        t
+        for t in dir(transformations)
+        if isinstance(getattr(transformations, t), type)
+        and t not in {"Destupifier", "LabelEncoder"}
+    )
     for i, (f, t) in enumerate(args.features):
         try:
+            if t not in valid_transforms:
+                raise AttributeError
             args.features[i] = (f, getattr(transformations, t))
         except AttributeError:
-            parser.error(
-                f"{t} is not a valid transformation! Supported transformations are:"
-                "MinMaxScaler, ",
-                "OneHotEncoder, ",
-                "RobustScaler, ",
-                "StandardScaler, ",
-                "UniformScaler",
-            )
+            parser.error(f"{t} is not valid! Must be: {', '.join(valid_transforms)}")
 
-    # ensure each feature set is associated with only one transformation
+    # try to ensure each feature set is associated with only one transformation
     feature_sets = set()
     features, transforms = zip(*args.features)
     features = tuple(tuple(f.split(",")) for f in features)
@@ -169,14 +173,14 @@ def command_line():
 def process(dataset, data_transforms, destupefy, features, filename, label_transform):
     """
     This function serves as a wrapper for the main interfaces of this repo.
-    Specifically, it: (1) retrieves datasets from the adapter package, (2)
+    Specifically, it: (1) retrieves datasets from the downloaders package, (2)
     transforms (and optionally cleans) the data via the transform module, (3)
     casts the pandas dataframes as numpy arrays and (4) saves the data to disk.
 
     :param dataset: dataset to download
-    :type dataset: str
+    :type dataset: downloaders module object
     :param data_transforms: transformations to apply to the data
-    :type data_transforms: tuple of transformations module callables
+    :type data_transforms: tuple of transformations module classes
     :param destupefy: whether to clean the data (experimental)
     :type destupefy: bool
     :param features: features to transform
@@ -184,29 +188,33 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
     :param filename: filename of the saved dataset
     :type filename: str
     :param label_transform: transformation to apply to the labels
-    :type label_transform: transformations module callable
+    :type label_transform: transformations module class
     :return: None
     :rtype: NoneType
     """
 
     # retrieve the dataset and get feature names (to resolve "all" argument)
-    print(f"Retrieving {dataset}...")
-    datadict = getattr(adapters, dataset).retrieve()
+    print(f"Retrieving {(dataname := dataset.__name__.split('.').pop())}...")
+    datadict = dataset.retrieve()
     partition = next(iter(datadict))
     feature_names = datadict[partition]["data"].columns
-    print(f"Inferred {len(feature_names)} features from {partition} partition.")
 
     # map "all" keyword to all features except those that are one-hot encoded
     print("Resolving 'all' argument with inferred features...")
-    all_features = feature_names.difference(
+    one_hot_features = tuple(
         feature
-        for feature, transform in zip(features, data_transforms)
-        if transform == transformations.Transformer.onehotencoder
+        for feature_set, transform in zip(features, data_transforms)
+        if transform == transformations.OneHotEncoder
+        for feature in feature_set
     )
+    all_features = feature_names.difference(other=one_hot_features, sort=False)
     features = tuple(tuple(all_features) if f == ("all",) else f for f in features)
 
     # instantiate transformers and determine if a training set exists
-    print("Instantiating Transformers...")
+    print(
+        "Instantiating Transformers with the following transformations:",
+        ", ".join(f"{t.__name__}{f}" for f, t in zip(features, data_transforms)),
+    )
     data_transforms = tuple(
         t(sparse_output=False) if t is transformations.OneHotEncoder else t()
         for t in data_transforms
@@ -215,57 +223,78 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
         *zip(data_transforms, features),
         n_jobs=-1,
         remainder="passthrough",
-        verbose_features_out=False,
-    ).set_output(tranform="pandas")
-    label_transformer = label_transform() if label_transform else None
-    destupefier = transformations.Destupefier() if destupefy else None
+        verbose_feature_names_out=False,
+    ).set_output(transform="pandas")
+    label_transformer = label_transform()
+    destupefier = (
+        transformations.Destupefier()
+        if destupefy
+        else sklearn.preprocessing.FunctionTransformer()
+    )
     partitions = list(datadict)
     if "train" in datadict:
         has_train = True
-        partitions.sorted(key=lambda p: p != "train")
+        partitions.sort(key=lambda p: p != "train")
     else:
         has_train = False
 
     # fit the transformer to each partitions if a training set doesn't exist
-    metadata = {}
+    metadata = {
+        "transformations": tuple(type(t).__name__ for t in data_transforms),
+        "version": mlds.__version__,
+    }
     for partition in partitions:
-        print(f"Applying transformations to {dataset} {partition} partition...")
+        print(f"Applying transformations to {dataname} {partition} partition...")
         data, labels = datadict[partition].values()
         fit = partition == "train" or not has_train
 
         # apply transformations and (optionally) clean the data
         if fit:
             data_transformers.fit(data)
-            label_transformer.fit(labels) if label_transform else None
-            destupefier.fit(data) if destupefy else None
+            label_transformer.fit(labels)
+            destupefier.fit(data)
         x = data_transformers.transform(data)
-        y = label_transformer.transform(labels) if label_transform else labels
-        x, y = destupefier.transform(x, y) if destupefy else (x, y)
+        y = pandas.Series(label_transformer.transform(labels))
+        x, y = destupefier.transform(x, y)
 
-        # correct feature order and cast to numpy arrays
-        partition_features = filter(lambda f: f in destupefier.deficient, features)
-        for _, t, f in data_transformers.transformers_:
-            if type(t) is transformations.OneHotEncoder:
-                idx = features.index(f)
-                features[idx : idx + 1] = [f for f in t.categories_]
+        # correct order of features when using passthrough and one-hot encoding
+        one_hot_map = {}
+        partition_features = feature_names.difference(
+            other=destupefier.deficient, sort=False
+        )
+        output_one_hot_features = (
+            transformed_features
+            for _, t, _ in data_transformers.transformers_
+            if type(t) is transformations.OneHotEncoder
+            for transformed_features in t.categories_
+        )
+        for original, new in zip(one_hot_features, output_one_hot_features):
+            one_hot_map[original] = list(f"{original}_" + new)
+            idx = partition_features.get_loc(original)
+            partition_features = partition_features.delete(idx)
+            partition_features = partition_features.insert(idx, one_hot_map[original])
         x = x[partition_features]
-        datadict[partition] = {"data": x.to_numpy(), "labels": y.to_numpy()}
 
-        # set feature naems, class name maps, and one-hot-encoding maps as metadata
-        metadata[partition] = {"feature_names": partition_features}
-        for _, t, f in data_transformers.transformers_:
-            if type(t) is transformations.OneHotEncoder:
-                onehot_map = metadata[partition].setdefault("onehot_map", {})
-                onehot_map[f] = t.categories_
+        # cast dataframes as 32-bit numpy arrays in C-contiguous order
+        datadict[partition] = {
+            "data": x.to_numpy().astype("float32", order="C"),
+            "labels": y.to_numpy().astype("float32", order="C"),
+        }
+
+        # set feature names, class name maps, and one-hot-encoding maps as metadata
+        if not feature_names.equals(partition_features):
+            metadata.setdefault(partition, {})["features"] = list(partition_features)
+        if one_hot_map:
+            metadata.setdefault(partition, {})["one_hot_map"] = one_hot_map
         if label_transformer:
-            classes = label_transformer.classes_
-            metadata[partition]["class_map"] = {n: o for n, o in enumerate(classes)}
+            class_map = {o: n for n, o in enumerate(label_transformer.classes_)}
+            metadata.setdefault(partition, {})["class_map"] = class_map
         print(f"Transformation complete. Final shape: {x.shape} × {y.shape}")
 
     # write the dataset to disk
-    outdir = pathlib.Path(__file__).parent / "datasets" / f"{filename}.pkl", "wb"
+    outdir = pathlib.Path(__file__).parent / "datasets"
     outdir.mkdir(parents=True, exist_ok=True)
     with open(outdir / f"{filename}.pkl", "wb") as f:
-        pickle.dump(Dataset(datadict=datadict, dataset=filename, metadata=metadata), f)
-    print(f"{dataset} retrieval, transformation, and export complete!")
+        dill.dump(Dataset(datadict=datadict, dataset=filename, metadata=metadata), f)
+    print(f"{dataname} retrieval, transformation, and export complete!")
     return None
