@@ -2,24 +2,18 @@
 This module lists available datasets and defines the downloader function.
 """
 import requests
-from mlds.downloaders import (
-    cicmalmem2022,
-    cifar10,
-    fashionmnist,
-    mnist,
+from mlds.downloaders import (  # cicmalmem2022,; cifar10,; fashionmnist,; mnist,; phishing,; unswnb15,
     nslkdd,
-    phishing,
-    unswnb15,
 )
 
 __all__ = [
-    "cicmalmem2022",
-    "cifar10",
-    "fashionmnist",
+    # "cicmalmem2022",
+    # "cifar10",
+    # "fashionmnist",
     "nslkdd",
-    "mnist",
-    "phishing",
-    "unswnb15",
+    # "mnist",
+    # "phishing",
+    # "unswnb15",
 ]
 
 
@@ -46,8 +40,11 @@ def download(directory, force, urls):
         data = directory / url.split("/").pop()
         if not data.is_file() or force:
             print(f"Downloading {url} to {directory}...")
-            request = requests.get(url)
-            request.raise_for_status()
-            data.write_bytes(request.content)
+            with requests.Session() as session:
+                retries = requests.adapters.Retry(total=3, status_forcelist=[54])
+                session.mount(url, requests.adapters.HTTPAdapter(max_retries=retries))
+                response = session.get(url)
+                response.raise_for_status()
+                data.write_bytes(response.content)
         dataset[url] = data.read_bytes()
     return dataset
