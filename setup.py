@@ -48,7 +48,7 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Information Analysis",
     ],
     description="Scripts & an API for working with machine learning datasets",
-    entry_points={"console_scripts": "mlds=mlds:command_line"},
+    entry_points={"console_scripts": "mlds=mlds.datasets:command_line"},
     install_requires=[
         "dill",
         "numpy",
