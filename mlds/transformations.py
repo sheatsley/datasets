@@ -2,6 +2,7 @@
 This module defines aliases and classes for transforming and cleaning datasets.
 """
 
+import pandas
 import sklearn.preprocessing
 
 # the following sklearn transformations are supported
@@ -10,9 +11,6 @@ MinMaxScaler = sklearn.preprocessing.MinMaxScaler
 OneHotEncoder = sklearn.preprocessing.OneHotEncoder
 RobustScaler = sklearn.preprocessing.RobustScaler
 StandardScaler = sklearn.preprocessing.StandardScaler
-UniformScaler = sklearn.preprocessing.FunctionTransformer(
-    lambda x: (x - x.min()) / (x.max() - x.min())
-)
 
 
 class Destupefier(sklearn.base.TransformerMixin):
@@ -69,8 +67,36 @@ class Destupefier(sklearn.base.TransformerMixin):
         dataset.drop(columns=self.deficient, inplace=True)
         print(f"Scanning {len(dataset)} samples for duplicates...")
         duplicates = dataset.duplicated()
+        print(f"Dropping {sum(duplicates)} duplicate samples...")
         dataset.drop(index=dataset.index[duplicates], inplace=True)
-        dataset.reset_index(inplace=True)
-        labels.drop(labels.index[duplicates], inplace=True)
-        labels.reset_index(inplace=True)
+        dataset.reset_index(drop=True, inplace=True)
+        labels.drop(labels=labels.index[duplicates], inplace=True)
+        labels.reset_index(drop=True, inplace=True)
         return dataset, labels
+
+
+class UniformScaler(sklearn.preprocessing.FunctionTransformer):
+    """
+    The UniformScaler is a stateless transformer which scales all features
+    to be between 0 and 1 via:
+
+                    (x - x_min) / (x_max - x_min)
+
+    where x is the input, x_min is the minimum value observed in x and x_max is
+    the maximum value observed in x. Such scaling is commonly done for images.
+
+    :func:`__init__`: initializes the UniformScaler
+    """
+
+    def __init__(self):
+        """
+        This method initializes the UniformScaler. Specifically, this populates the
+        func attribute with the scaling function described above.
+
+        :return: initialized UniformScaler
+        :rtype: UniformScaler object
+        """
+        super().__init__(
+            func=lambda x: pandas.DataFrame((x - x.min()) / (x.max() - x.min()))
+        )
+        return None
