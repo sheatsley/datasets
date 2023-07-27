@@ -25,14 +25,86 @@ def main(datasets):
 
     # define feature transformations for each dataset
     transformations = {
+        mlds.downloaders.cicmalmem2022: {
+            "data_transforms": (mlds.transformations.MinMaxScaler,),
+            "destupefy": True,
+            "features": (("all",),),
+            "filename": "cicmalmem2022",
+            "label_transform": mlds.transformations.LabelEncoder,
+        },
+        mlds.downloaders.cifar10: {
+            "data_transforms": (mlds.transformations.UniformScaler,),
+            "destupefy": False,
+            "features": (("all",),),
+            "filename": "cifar10",
+            "label_transform": mlds.transformations.IdentityTransformer,
+        },
+        mlds.downloaders.fashionmnist: {
+            "data_transforms": (mlds.transformations.UniformScaler,),
+            "destupefy": False,
+            "features": (("all",),),
+            "filename": "fashionmnist",
+            "label_transform": mlds.transformations.IdentityTransformer,
+        },
+        mlds.downloaders.mnist: {
+            "data_transforms": (mlds.transformations.UniformScaler,),
+            "destupefy": False,
+            "features": (("all",),),
+            "filename": "mnist",
+            "label_transform": mlds.transformations.IdentityTransformer,
+        },
         mlds.downloaders.nslkdd: {
             "data_transforms": (
                 mlds.transformations.MinMaxScaler,
                 mlds.transformations.OneHotEncoder,
             ),
             "destupefy": True,
-            "features": (("all",), ("protocol_type", "service", "flag")),
+            "features": (
+                ("all",),
+                (
+                    "protocol_type",
+                    "service",
+                    "flag",
+                ),
+            ),
             "filename": "nslkdd",
+            "label_transform": mlds.transformations.LabelEncoder,
+        },
+        mlds.downloaders.phishing: {
+            "data_transforms": (
+                mlds.transformations.MinMaxScaler,
+                mlds.transformations.OneHotEncoder,
+            ),
+            "destupefy": True,
+            "features": (
+                ("all",),
+                (
+                    "SubdomainLevelRT",
+                    "UrlLengthRT",
+                    "PctExtResourceUrlsRT",
+                    "AbnormalExtFormActionR",
+                    "ExtMetaScriptLinkRT",
+                    "PctExtNullSelfRedirectHyperlinksRT",
+                ),
+            ),
+            "filename": "phishing",
+            "label_transform": mlds.transformations.LabelEncoder,
+        },
+        mlds.downloaders.unswnb15: {
+            "data_transforms": (
+                mlds.transformations.MinMaxScaler,
+                mlds.transformations.OneHotEncoder,
+            ),
+            "destupefy": True,
+            "features": (
+                ("all",),
+                (
+                    "proto",
+                    "service",
+                    "state",
+                ),
+            ),
+            "filename": "unswnb15",
             "label_transform": mlds.transformations.LabelEncoder,
         },
     }
