@@ -9,7 +9,7 @@ import subprocess
 __available__ = {p.stem for p in pathlib.Path(__file__).parent.glob("datasets/*.pkl")}
 try:
     __version__ = subprocess.check_output(
-        ("git", "rev-parse", "--short", "HEAD"), text=True
+        ("git", "-C", *__path__, "rev-parse", "--short", "HEAD"), text=True
     ).strip()
 except subprocess.CalledProcessError:
     with open(pathlib.Path(__file__).parent / "VERSION", "r") as f:
