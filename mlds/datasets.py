@@ -282,13 +282,12 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
         }
 
         # set feature names, class name maps, and one-hot-encoding maps as metadata
-        if not feature_names.equals(partition_features):
-            metadata.setdefault(partition, {})["features"] = list(partition_features)
+        metadata[partition] = {"features": list(partition_features)}
         if one_hot_map:
-            metadata.setdefault(partition, {})["one_hot_map"] = one_hot_map
+            metadata[partition]["one_hot_map"] = one_hot_map
         if type(label_transformer) is not transformations.IdentityTransformer:
             class_map = {o: n for n, o in enumerate(label_transformer.classes_)}
-            metadata.setdefault(partition, {})["class_map"] = class_map
+            metadata[partition]["class_map"] = class_map
         print(f"Transformation complete. Final shape: {x.shape} × {y.shape}")
 
     # write the dataset to disk
