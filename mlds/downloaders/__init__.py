@@ -2,18 +2,24 @@
 This module lists available datasets and defines the downloader function.
 """
 import requests
-from mlds.downloaders import (  # cicmalmem2022,; cifar10,; fashionmnist,; mnist,; phishing,; unswnb15,
+from mlds.downloaders import (
+    cicmalmem2022,
+    cifar10,
+    fashionmnist,
+    mnist,
     nslkdd,
+    phishing,
+    unswnb15,
 )
 
 __all__ = [
-    # "cicmalmem2022",
-    # "cifar10",
-    # "fashionmnist",
+    "cicmalmem2022",
+    "cifar10",
+    "fashionmnist",
     "nslkdd",
-    # "mnist",
-    # "phishing",
-    # "unswnb15",
+    "mnist",
+    "phishing",
+    "unswnb15",
 ]
 
 
