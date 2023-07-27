@@ -88,7 +88,7 @@ def main(datasets):
                 ),
             ),
             "filename": "phishing",
-            "label_transform": mlds.transformations.LabelEncoder,
+            "label_transform": mlds.transformations.IdentityTransformer,
         },
         mlds.downloaders.unswnb15: {
             "data_transforms": (
