@@ -75,6 +75,38 @@ class Destupefier(sklearn.base.TransformerMixin):
         return dataset, labels
 
 
+class IdentityTransformer(sklearn.base.TransformerMixin):
+    """
+    The IdentityTransformer is a stateless transformer which returns the input
+    unchanged (used when a transformer is required, but no transformation is desired).
+
+    :func:`fit`: does nothing
+    :func:`transform`: returns the input unchanged
+    """
+
+    def fit(self, *_):
+        """
+        This method does nothing.
+
+        :param *_: arbitrary arguments (not used)
+        :type *_: list
+        :return: 'fitted' IdentityTransformer
+        :rtype: IdentityTransformer object
+        """
+        return self
+
+    def transform(self, *_):
+        """
+        This method returns the input unchanged.
+
+        :param *_: arbitrary arguments (not used)
+        :type *_: list
+        :return: the input
+        :rtype: list (or the argument directly if only one element is passed)
+        """
+        return _ if len(_) > 1 else _[0]
+
+
 class UniformScaler(sklearn.preprocessing.FunctionTransformer):
     """
     The UniformScaler is a stateless transformer which scales all features
@@ -97,6 +129,8 @@ class UniformScaler(sklearn.preprocessing.FunctionTransformer):
         :rtype: UniformScaler object
         """
         super().__init__(
-            func=lambda x: pandas.DataFrame((x - x.min()) / (x.max() - x.min()))
+            func=lambda x: pandas.DataFrame((x - x.min()) / (x.max() - x.min())),
+            feature_names_out="one-to-one",
+            validate=True,
         )
         return None
