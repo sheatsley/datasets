@@ -1,113 +1,41 @@
 """
-This module defines a custom adapter for downloading the Phishing dataset.
-Author: Ryan Sheatsley
-Tue Mar 29 2022
+This module downloads the Phishing dataset.
 """
-from mlds.adapters import baseadapter  # Base Adapter class for custom datasets
-import pandas  # Python Data Analysis Library
-from mlds.utilities import print  # Timestamped printing
+import pathlib
+
+import mlds.downloaders
+import pandas
 
 
-class Phishing(baseadapter.BaseAdapter):
+def retrieve(directory=pathlib.Path("/tmp/phishing"), force=False):
     """
-    This class adds support for downloading, preprocessing, and saving the
-    Phishing dataset 2019 (https://www.fcsit.unimas.my/phishing-dataset). It
-    inherits the following interfaces from the BaseAdapter parent class:
+    This function downloads, preprocesses, and saves the Phishing dataset.
+    (https://www.fcsit.unimas.my/phishing-dataset). Specifically, this: (1)
+    downloads the dataset, and (2) extracts feature names.
 
-    :func:`download`: retrieves datasets via HTTP through the requests module
-
-    Moreover, it redefines the following interfaces:
-
-    :func:`__init__`: instantiates Phishing objects
-    :func:`preprocess`: resolves any dataset particulars
-    :func:`read`: ensures the dataset conforms to the required standard
-
-    Finally, since the Phishing dataset is avaiable via ARFF, feature names are
-    extracted and made available for applying feature-specific transformations
-    by name (as opposed to exclusively by index).
+    :param directory: directory to download the datasets to
+    :type directory: str
+    :param force: redownload the data, even if it exists
+    :type force: bool
+    :return: the Phishing dataset
+    :rtype: dict
     """
 
-    def __init__(self, directory="/tmp/", force_download=False):
-        """
-        The Phishing dataset can be readily retrieved as-is; no special
-        preprocessing is necessary.
-
-        :param directory: dataset download directory
-        :type directory: string
-        :return: Phishing-dataset-ready adapter
-        :rtype: Phishing object
-        """
-        super().__init__(directory, force_download)
-
-        # metadata to retrieve the dataset
-        self.url = (
-            "https://data.mendeley.com/public-files/datasets/h3cgnj8hft/files/"
-            "84a399ef-c57e-4ee6-9207-7bffb5ace261/file_downloaded"
-        )
-        return None
-
-    def preprocess(self, data):
-        """
-        Conforming to the BaseAdapter guidelines, we: (1) read the dataset
-        as-is (no unpacking necessary), and (2) use the data as-is (no
-        transformations are necessary, beyond reading the feature names and
-        setting the column header to such).
-
-        :param data: the current dataset file
-        :type data: bytes
-        :return: santized data file
-        :rtype: pandas dataframe
-        """
-
-        # extract feature names from ARFF header & instantiate dataframe
-        print("Extracting feature names and loading dataframe...")
-        datafile = data.decode().splitlines()
-        features = [line.split()[1] for line in datafile[2:51]]
-        df = pandas.DataFrame([x.split(",") for x in datafile[53:]], columns=features)
-        yield df
-
-    def read(self):
-        """
-        This method defines the exclusive interface expected by Dataset
-        objects. Thus, this method should download (if necessary), prepare, and
-        return the dataset as a pandas dataframe. Importantly, the read data
-        must conform to the following standard:
-
-        (1) If the dataset is for supervised learning, labels must be pointed
-        to via the 'labels' key (as done with TensorFlow datasets), in their
-        respective data category (data must be pointed to by a 'data' key).
-        (2a) Training, testing, and validation data categories must be pointed
-        to via "train", "test", and "validation" keys, respectively.
-        (2b) If all dataset categories are disjoint in nature or if there is
-        only a single source of data, then the key names can be arbitrary.
-        (3) All data should be returned as a pandas dataframe.
-
-        :return: the downloaded datasets
-        :rtype: dictionary; keys are the dataset types & values are dataframes
-        """
-        return {
-            "dataset": {
-                "data": df.drop(columns="CLASS_LABEL"),
-                "labels": df.CLASS_LABEL.copy(),
-            }
-            for df in self.preprocess(self.download(self.url))
-        }
-
-
-if __name__ == "__main__":
-    """
-    Example usage of the Phishing class. It downloads the Phishing dataset (if
-    it hasn't already) to /tmp, preprocesses the data, and returns the data as
-    a pandas dataframe. Importantly, to debug adapters, they must be run form
-    the root directory of the machine learning datasets repo as a module, such
-    as:
-
-                            python3 -m adapters.phishing
-    """
-    dataset = Phishing().read()
-    print(
-        f'Phishing has {len(dataset["dataset"]["data"])} samples,',
-        f'{len(dataset["dataset"]["data"].columns)} features with',
-        f'{len(dataset["dataset"]["labels"].unique())} classes.',
+    # define where to download the dataset
+    urls = (
+        "https://data.mendeley.com/public-files/datasets/h3cgnj8hft/files/"
+        "84a399ef-c57e-4ee6-9207-7bffb5ace261/file_downloaded",
     )
-    raise SystemExit(0)
+
+    # retrieve the dataset and get feature names
+    dataset = {}
+    download = mlds.downloaders.download(directory=directory, force=force, urls=urls)
+    _, download = download.popitem()
+    print("Processing the Phishing dataset...")
+    datafile = download.decode().splitlines()
+    features = [line.split()[1] for line in datafile[2:51]]
+    df = pandas.DataFrame([x.split(",") for x in datafile[53:]], columns=features)
+    data = df.drop(columns="CLASS_LABEL")
+    labels = df["CLASS_LABEL"].copy()
+    dataset["dataset"] = {"data": data, "labels": labels}
+    return dataset
