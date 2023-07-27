@@ -49,7 +49,7 @@ class Dataset:
             data["classes"] = len(set(data["labels"]))
             data["samples"], data["features"] = data["data"].shape
             setattr(self, partition, type("Partition", (), data)())
-        self.dataset = dataset
+        self.dataname = dataset
         self.metadata = metadata
         return None
 
@@ -61,12 +61,12 @@ class Dataset:
         :return: dataset statistics
         :rtype: str
         """
-        samples = ", ".join([f"{getattr(self, p).samples}" for p in self.partitions])
-        features = ", ".join([f"{getattr(self, p).features}" for p in self.partitions])
-        classes = ", ".join([f"{getattr(self, p).classes}" for p in self.partitions])
+        partitions = [getattr(self, p) for p in self.metadata["partitions"]]
+        info = [(f"{p.samples}", f"{p.features}", f"{p.classes}") for p in partitions]
+        samples, features, classes = map(", ".join, zip(*info))
         return (
-            f"{self.dataset}(samples=({samples}), features={features}, "
-            f"classes={classes}, "
+            f"{self.dataname}(samples=({samples}), features=({features}), "
+            f"classes=({classes}), "
             f"partitions=({', '.join(self.metadata['partitions'])}), "
             f"transformations=({', '.join(self.metadata['transformations'])}), "
             f"version={self.metadata['version']})"
@@ -115,7 +115,7 @@ def command_line():
         "-l",
         "--labels",
         choices=(getattr(transformations, d) for d in ("LabelEncoder",)),
-        default=sklearn.preprocessing.FunctionTransformer,
+        default=mlds.transformations.IdentityTransformer,
         help="label transformation to apply",
         metavar="LABEL_TRANSFORMATION",
         type=lambda d: getattr(transformations, d),
@@ -138,7 +138,7 @@ def command_line():
         t
         for t in dir(transformations)
         if isinstance(getattr(transformations, t), type)
-        and t not in {"Destupifier", "LabelEncoder"}
+        and t not in {"Destupifier", "IdentityTransformer", "LabelEncoder"}
     )
     for i, (f, t) in enumerate(args.features):
         try:
@@ -229,7 +229,7 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
     destupefier = (
         transformations.Destupefier()
         if destupefy
-        else sklearn.preprocessing.FunctionTransformer()
+        else transformations.IdentityTransformer()
     )
     partitions = list(datadict)
     if "train" in datadict:
@@ -240,6 +240,7 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
 
     # fit the transformer to each partitions if a training set doesn't exist
     metadata = {
+        "partitions": partitions,
         "transformations": tuple(type(t).__name__ for t in data_transforms),
         "version": mlds.__version__,
     }
@@ -259,9 +260,8 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
 
         # correct order of features when using passthrough and one-hot encoding
         one_hot_map = {}
-        partition_features = feature_names.difference(
-            other=destupefier.deficient, sort=False
-        )
+        removed = destupefier.deficient if destupefy else []
+        partition_features = feature_names.difference(other=removed, sort=False)
         output_one_hot_features = (
             transformed_features
             for _, t, _ in data_transformers.transformers_
@@ -286,7 +286,7 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
             metadata.setdefault(partition, {})["features"] = list(partition_features)
         if one_hot_map:
             metadata.setdefault(partition, {})["one_hot_map"] = one_hot_map
-        if label_transformer:
+        if type(label_transformer) is not transformations.IdentityTransformer:
             class_map = {o: n for n, o in enumerate(label_transformer.classes_)}
             metadata.setdefault(partition, {})["class_map"] = class_map
         print(f"Transformation complete. Final shape: {x.shape} × {y.shape}")
