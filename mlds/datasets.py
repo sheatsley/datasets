@@ -46,8 +46,13 @@ class Dataset:
         :rtype: Dataset object
         """
         for partition, data in datadict.items():
+            data["partition"] = partition
             data["classes"] = len(set(data["labels"]))
             data["samples"], data["features"] = data["data"].shape
+            data["__repr__"] = (
+                lambda p: f"{p.partition}(samples={p.samples}, "
+                f"features={p.features}, classes={p.classes})"
+            )
             setattr(self, partition, type("Partition", (), data)())
         self.dataname = dataset
         self.metadata = metadata
