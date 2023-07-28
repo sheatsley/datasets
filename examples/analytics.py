@@ -34,7 +34,7 @@ def main(datasets, override):
         dataset = getattr(mlds, dataname)
         for partition in dataset.metadata["partitions"]:
             if not override and (total := getattr(dataset, partition).features) > 500:
-                print(f"Skipping {dataname} {partition} ({total}> 500 features)...")
+                print(f"Skipping {dataname} {partition} ({total} > 500 features)...")
                 continue
 
             partition_name = f"{dataname}-{partition}"
