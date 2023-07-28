@@ -33,8 +33,8 @@ values. At this time, the following datasets are supported:
 * [Fashion-MNIST](https://github.com/zalandoresearch/fashion-mnist) (via [TensorFlow Datasets](https://www.tensorflow.org/datasets))
 * [MNIST](http://yann.lecun.com/exdb/mnist/) (via [TensorFlow Datasets](https://www.tensorflow.org/datasets))
 * [NSL-KDD](https://www.unb.ca/cic/datasets/nsl.html)
-* [Phishing Dataset](https://www.fcsit.unimas.my/phishing-dataset)
-* [UNSW-NB15](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity/ADFA-NB15-Datasets/)
+* [Phishing](https://www.fcsit.unimas.my/phishing-dataset)
+* [UNSW-NB15](https://research.unsw.edu.au/projects/unsw-nb15-dataset)
 
 ## Quick Start
 
