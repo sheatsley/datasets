@@ -94,8 +94,9 @@ def command_line():
     )
     parser.add_argument(
         "dataset",
-        choices=mlds.downloaders.__all__,
+        choices={getattr(mlds.downloaders, d) for d in mlds.downloaders.__all__},
         help="Dataset to retrieve and process",
+        type=lambda d: getattr(mlds.downloaders, d),
     )
     parser.add_argument(
         "--destupefy",
@@ -168,7 +169,7 @@ def command_line():
         dataset=args.dataset,
         data_transforms=tuple(transforms),
         destupefy=args.destupefy,
-        features=args.features,
+        features=features,
         filename=args.filename,
         label_transform=args.labels,
     )
