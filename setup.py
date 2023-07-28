@@ -1,7 +1,5 @@
 """
 Build script for Machine Learning Datasets
-Author: Ryan Sheatsley
-Date: Thu Jun 2 2022
 """
 import subprocess
 
@@ -57,7 +55,6 @@ setuptools.setup(
         "requests",
         "scikit-learn",
         "tensorflow-datasets",
-        "torchvision",
     ],
     license="BSD",
     long_description=long_description,
