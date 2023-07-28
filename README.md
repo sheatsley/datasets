@@ -12,10 +12,10 @@ documentation).
 
 ## Table of Contents
 
-* Datasets
-* Quick Start
-* Advanced Usage
-* Repo Overview
+* [Datasets](#datasets)
+* [Quick Start](#quick-start)
+* [Advanced Usage](#advanced-usage)
+* [Repo Overview](#repo-overview)
 
 ## Datasets
 
@@ -86,6 +86,10 @@ Afterwards, import the dataset filename to load it:
            [0., 0., 0., ..., 0., 0., 0.]], dtype=float32)
     >>> mnist.train.labels
     array([4., 1., 0., ..., 6., 1., 5.], dtype=float32)
+
+Other uses can be found in the
+[examples](https://github.com/sheatsley/datasets/tree/master/examples)
+directory.
 
 ## Advanced Usage
 
