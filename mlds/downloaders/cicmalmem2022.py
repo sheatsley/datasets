@@ -31,6 +31,7 @@ def retrieve(directory=pathlib.Path("/tmp/cicmalmem2022"), force=False):
 
     # retrieve the dataset, drop last column, and fix labels
     dataset = {}
+    directory.mkdir(parents=True, exist_ok=True)
     try:
         if force:
             raise FileNotFoundError

@@ -54,6 +54,7 @@ def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
     # retrieve the dataset, drop columns, nulls, and invalid features
     dataset = {}
     dataframes = []
+    directory.mkdir(parents=True, exist_ok=True)
     for (partition, file), url in zip(files, urls):
         try:
             if force:
