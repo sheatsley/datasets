@@ -7,7 +7,7 @@ import pandas
 import tensorflow_datasets
 
 
-def retrieve(directory=pathlib.Path("/tmp/mnist"), force=False):
+def retrieve(directory=pathlib.Path("/tmp/cifar10"), force=False):
     """
     This function downloads, preprocesses, and saves the CIFAR-10 dataset.
     (https://www.cs.toronto.edu/%7Ekriz/cifar.html). Specifically, this: (1)
