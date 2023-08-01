@@ -5,4 +5,4 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y git python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY . mlds
-RUN pip3 install --no-cache-dir ./mlds && rm -rf mlds
+RUN pip3 install --no-cache-dir mlds/ && rm -rf mlds
