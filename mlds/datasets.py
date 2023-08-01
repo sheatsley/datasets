@@ -5,8 +5,8 @@ applying feature and label transformations, (4) and writing data to disk.
 """
 import argparse
 import pathlib
+import pickle
 
-import dill
 import pandas
 import sklearn.compose
 
@@ -16,27 +16,21 @@ import mlds.transformations as transformations
 
 class Dataset:
     """
-    The Dataset class defines the main interfaces for datasets created with this
-    repo. It defines methods for accessing data and previewing metadata.
+    The Dataset class defines the main interfaces for datasets created with
+    this repo. It instantiates Partition objects for each partition of the the
+    dataset and defines methods for viewing metadata and partition information.
 
-    The Dataset class represents the main interface for working with loaded
-    datasets via the load method in this module. Specifically, it: (1) provides
-    an intuitive representation of loaded partitions (including the partitions,
-    the number of samples, and associated metadata), and (2) defines wrappers
-    for casting numpy arrays into popular datatypes used in machine learning
-    (e.g., PyTorch Tensors).
-
-    :func:`__init__`: prepares loaded data
-    :func:`__repr__`: shows useful dataset statistics
+    :func:`__init__`: instantiates Dataset objects
+    :func:`__repr__`: shows dataset metadata and information on all partitions
     """
 
     def __init__(self, datadict, dataset, metadata):
         """
         This method instantiates a Dataset object with attributes to access the
-        underlying data and labels, as well as collects metadata attributes to
-        be used as a string-based representation.
+        underlying data and labels (as Partition objects), as well as collects
+        and saves partition information and metadata.
 
-        :param datadict: the dataset to save
+        :param datadict: the partitions to save
         :type datadict: dict of numpy ndarray objects
         :param dataset: name of the dataset
         :type dataset: str
@@ -44,6 +38,18 @@ class Dataset:
         :type metadata: dict of various datatypes
         :return: a dataset
         :rtype: Dataset object
+        """
+        partinfo = dict(classes=[], features=[], samples=[])
+        for partname in datadict:
+            partition = Partition(datadict[partname], f"{dataset}-{partname}")
+            for attr in partinfo:
+                partinfo[attr].append(getattr(partition, attr))
+            setattr(self, partname.lower(), partition)
+        self.classes = tuple(partinfo["classes"])
+        self.dataname = dataset
+        self.features = tuple(partinfo["features"])
+        self.metadata = metadata
+        self.samples = tuple(partinfo["samples"])
         """
         for partition, data in datadict.items():
             data["partition"] = partition
@@ -53,29 +59,72 @@ class Dataset:
                 lambda p: f"{p.partition}(samples={p.samples}, "
                 f"features={p.features}, classes={p.classes})"
             )
+            partition = partition.lower()
             setattr(self, partition, type("Partition", (), data)())
         self.dataname = dataset
         self.metadata = metadata
+        """
         return None
 
     def __repr__(self):
         """
-        This method returns a string-based representation of useful metadata
-        for debugging.
+        This method returns a string-based representation of information on all
+        partitions and general dataset metadata.
 
-        :return: dataset statistics
+        :return: dataset information
         :rtype: str
         """
-        partitions = [getattr(self, p) for p in self.metadata["partitions"]]
-        info = [(f"{p.samples}", f"{p.features}", f"{p.classes}") for p in partitions]
-        samples, features, classes = map(", ".join, zip(*info))
+        info = "samples", "features", "classes"
+        meta = "partitions", "transformations"
         return (
-            f"{self.dataname}(samples=({samples}), features=({features}), "
-            f"classes=({classes}), "
-            f"partitions=({', '.join(self.metadata['partitions'])}), "
-            f"transformations=({', '.join(self.metadata['transformations'])}), "
+            f"{self.dataname}("
+            f"""{", ".join(
+                f"{i}=({', '.join(map(str, getattr(self, i)))})" for i in info)} """
+            f"""{", ".join(f"{m}=({', '.join(self.metadata[m])})" for m in meta)}, """
             f"version={self.metadata['version']})"
         )
+
+
+class Partition:
+    """
+    The Partition class holds the data and labels associated with a particular
+    partition of the dataset. It sets attributes for the data and defines
+    methods for viewing useful information about the partition.
+
+    :func:`__init__`: instantiates Partition objects
+    :func:`__repr__`: shows partition information
+    """
+
+    def __init__(self, partition, partname):
+        """
+        This method instantiates a Partition object with attributes to access the
+        underlying data and labels, as well as collects metadata attributes to
+        be used as a string-based representation.
+
+        :param partition: the partition to save
+        :type partition: dict of numpy ndarray objects
+        :param partname: name of the partition
+        :type partname: str
+        :return: a partition
+        :rtype: Partition object
+        """
+        self.data = partition["data"]
+        self.labels = partition["labels"]
+        self.classes = len(set(self.labels))
+        self.samples, self.features = self.data.shape
+        self.partition = partname
+        return None
+
+    def __repr__(self):
+        """
+        This method returns a string-based representation of partition
+        information.
+
+        :return: partition information
+        :rtype: str
+        """
+        info = "samples", "features", "classes"
+        return f"{self.partition}({', '.join(f'{i}={getattr(self, i)}' for i in info)})"
 
 
 def command_line():
@@ -246,7 +295,7 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
 
     # fit the transformer to each partitions if a training set doesn't exist
     metadata = {
-        "partitions": partitions,
+        "partitions": tuple(partitions),
         "transformations": tuple(type(t).__name__ for t in data_transforms),
         "version": mlds.__version__,
     }
@@ -300,6 +349,6 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
     outdir = pathlib.Path(__file__).parent / "datasets"
     outdir.mkdir(parents=True, exist_ok=True)
     with open(outdir / f"{filename}.pkl", "wb") as f:
-        dill.dump(Dataset(datadict=datadict, dataset=filename, metadata=metadata), f)
+        pickle.dump(Dataset(datadict=datadict, dataset=filename, metadata=metadata), f)
     print(f"{dataname} retrieval, transformation, and export complete!")
     return None
