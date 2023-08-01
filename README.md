@@ -168,5 +168,5 @@ one-hot mappings (if applicable), and class mappings (if a label encoding
 scheme was applied). Metadata that pertains to the entire dataset (such as the
 transformations that were applied) is saved as a dictionary attribute for
 `Dataset` objects, while partition-specific information (such as the number of
-samples) is saved as an attribute for `Partition` objects (which are nested
-within the `Dataset` class).
+samples) is saved as an attribute for `Partition` objects (which are set as
+attributes in `Dataset` objects).
