@@ -31,7 +31,6 @@ setuptools.setup(
     entry_points={"console_scripts": "mlds=mlds.datasets:command_line"},
     install_requires=[
         "numpy",
-        "matplotlib",
         "pandas",
         "requests",
         "scikit-learn",
