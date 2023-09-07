@@ -50,20 +50,6 @@ class Dataset:
         self.features = tuple(partinfo["features"])
         self.metadata = metadata
         self.samples = tuple(partinfo["samples"])
-        """
-        for partition, data in datadict.items():
-            data["partition"] = partition
-            data["classes"] = len(set(data["labels"]))
-            data["samples"], data["features"] = data["data"].shape
-            data["__repr__"] = (
-                lambda p: f"{p.partition}(samples={p.samples}, "
-                f"features={p.features}, classes={p.classes})"
-            )
-            partition = partition.lower()
-            setattr(self, partition, type("Partition", (), data)())
-        self.dataname = dataset
-        self.metadata = metadata
-        """
         return None
 
     def __repr__(self):
