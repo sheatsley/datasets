@@ -129,7 +129,7 @@ class UniformScaler(sklearn.preprocessing.FunctionTransformer):
         :rtype: UniformScaler object
         """
         super().__init__(
-            func=lambda x: pandas.DataFrame((x - x.min()) / (x.max() - x.min())),
+            func=lambda x: (x - x.min()) / (x.max() - x.min()),
             feature_names_out="one-to-one",
             validate=True,
         )
