@@ -36,9 +36,8 @@ def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
 
     # define where to download the dataset and designate partitions
     urls = tuple(
-        "https://cloudstor.aarnet.edu.au/plus/s/2DhnLGDdEECo4ys/download?path"
-        "=%2FUNSW-NB15%20-%20CSV%20Files%2Fa%20part%20of%20training%20and"
-        f"%20testing%20set&files=UNSW_NB15_{partition}-set.csv"
+        "https://github.com/ColdAsYou165/dataset_UNSWNB15/raw/main/"
+        f"%E5%8E%9F%E5%A7%8B%E6%95%B0%E6%8D%AE%E9%9B%86/UNSW_NB15_{partition}-set.csv"
         for partition in ("testing", "training")
     )
 
