@@ -35,9 +35,12 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
     """
 
     # define where to download the dataset and what needs extracted
-    urls = ("http://205.174.165.80/CICDataset/NSL-KDD/Dataset/NSL-KDD.zip",)
+    urls = (
+        "https://github.com/Jehuty4949/NSL_KDD/raw/master/"
+        "Original%20NSL%20KDD%20Zip.zip",
+    )
     files = (("train", "KDDTrain+.txt"), ("test", "KDDTest+.txt"))
-    feature_file = "KDDTest-21.arff"
+    feature_file = "KDDTest-21.arff.txt"
 
     # define the label transformation
     label_transform = (
