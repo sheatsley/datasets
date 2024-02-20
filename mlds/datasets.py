@@ -3,6 +3,7 @@ This module defines the core for the machine learning datasets repo. It defines
 interfaces for (1) parsing command-line arguments, (2) retrieving datasets, (3)
 applying feature and label transformations, (4) and writing data to disk.
 """
+
 import argparse
 import pathlib
 import pickle
@@ -35,7 +36,7 @@ class Dataset:
         :param dataset: name of the dataset
         :type dataset: str
         :param metadata: metadata to be saved alongside the dataset
-        :type metadata: dict of various datatypes
+        :type metadata: dict
         :return: a dataset
         :rtype: Dataset object
         """
@@ -211,7 +212,9 @@ def command_line():
     raise SystemExit(0)
 
 
-def process(dataset, data_transforms, destupefy, features, filename, label_transform):
+def process(
+    dataset, data_transforms, destupefy, features, filename, label_transform, **rargs
+):
     """
     This function serves as a wrapper for the main interfaces of this repo.
     Specifically, it: (1) retrieves datasets from the downloaders package, (2)
@@ -230,17 +233,19 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
     :type filename: str
     :param label_transform: transformation to apply to the labels
     :type label_transform: transformations module class
+    :param rargs: retrieve arguments
+    :type rargs: dict
     :return: None
     :rtype: NoneType
     """
 
     # retrieve the dataset and get feature names (to resolve "all" argument)
     print(f"Retrieving {(dataname := dataset.__name__.split('.').pop())}...")
-    datadict = dataset.retrieve()
+    datadict = dataset.retrieve(**rargs)
     partition = next(iter(datadict))
     feature_names = datadict[partition]["data"].columns
 
-    # map "all" keyword to all features except those that are one-hot encoded
+    # map "all" to all features except one-hot or ordinal encoded features
     print("Resolving 'all' argument with inferred features...")
     one_hot_features = tuple(
         feature
@@ -248,7 +253,15 @@ def process(dataset, data_transforms, destupefy, features, filename, label_trans
         if transform == transformations.OneHotEncoder
         for feature in feature_set
     )
-    all_features = feature_names.difference(other=one_hot_features, sort=False)
+    ordinal_features = tuple(
+        feature
+        for feature_set, transform in zip(features, data_transforms)
+        if transform == transformations.OrdinalEncoder
+        for feature in feature_set
+    )
+    all_features = feature_names.difference(
+        other=one_hot_features + ordinal_features, sort=False
+    )
     features = tuple(tuple(all_features) if f == ("all",) else f for f in features)
 
     # instantiate transformers and determine if a training set exists
