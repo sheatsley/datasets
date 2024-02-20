@@ -9,13 +9,14 @@ import mlds.downloaders
 import pandas
 
 
-def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
+def retrieve(binary=False, directory=pathlib.Path("/tmp/nslkdd"), force=False):
     """
     This function downloads, preprocesses, and saves the NSL-KDD dataset
     (https://www.unb.ca/cic/datasets/nsl.html). Specifically, this: (1)
     downloads the dataset, (2) drops the last column (i.e., "difficulty"), (3)
-    extracts feature names, and (4) applies a common label transformation which
-    bundles specific attacks into families, defined as:
+    extracts feature names, and (4) applies a common label transformation (if
+    using multiclass labels) which bundles specific attacks into families,
+    defined as:
 
         DoS   - {apache, back, land, neptune, pod, processtable, smurf,
                 teardrop, udpstorm, worm}
@@ -26,6 +27,8 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
         U2R   - {buffer_overflow, loadmodule, perl, ps, rootkit, xterm,
                 sqlattack}
 
+    :param binary: whether to use the binary or multiclass labels
+    :type binary: bool
     :param directory: directory to download the datasets to
     :type directory: str
     :param force: redownload the data, even if it exists
@@ -58,22 +61,12 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
                 "teardrop",
                 "udpstorm",
                 "worm",
-            ),
-            "dos",
-        )
-        | {}.fromkeys(
-            (
                 "ipsweep",
                 "mscan",
                 "nmap",
                 "portsweep",
                 "saint",
                 "satan",
-            ),
-            "probe",
-        )
-        | {}.fromkeys(
-            (
                 "ftp_write",
                 "guess_passwd",
                 "httptunnel",
@@ -89,11 +82,6 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
                 "warezmaster",
                 "xlock",
                 "xsnoop",
-            ),
-            "r2l",
-        )
-        | {}.fromkeys(
-            (
                 "buffer_overflow",
                 "loadmodule",
                 "perl",
@@ -102,7 +90,70 @@ def retrieve(directory=pathlib.Path("/tmp/nslkdd"), force=False):
                 "xterm",
                 "sqlattack",
             ),
-            "u2r",
+            "attack",
+        )
+        if binary
+        else (
+            {}.fromkeys(
+                (
+                    "apache",
+                    "apache2",
+                    "back",
+                    "land",
+                    "mailbomb",
+                    "neptune",
+                    "pod",
+                    "processtable",
+                    "smurf",
+                    "teardrop",
+                    "udpstorm",
+                    "worm",
+                ),
+                "dos",
+            )
+            | {}.fromkeys(
+                (
+                    "ipsweep",
+                    "mscan",
+                    "nmap",
+                    "portsweep",
+                    "saint",
+                    "satan",
+                ),
+                "probe",
+            )
+            | {}.fromkeys(
+                (
+                    "ftp_write",
+                    "guess_passwd",
+                    "httptunnel",
+                    "imap",
+                    "named",
+                    "multihop",
+                    "phf",
+                    "sendmail",
+                    "snmpgetattack",
+                    "snmpguess",
+                    "spy",
+                    "warezclient",
+                    "warezmaster",
+                    "xlock",
+                    "xsnoop",
+                ),
+                "r2l",
+            )
+            | {}.fromkeys(
+                (
+                    "buffer_overflow",
+                    "loadmodule",
+                    "perl",
+                    "ps",
+                    "rootkit",
+                    "xterm",
+                    "sqlattack",
+                ),
+                "u2r",
+            )
         )
     )
 
