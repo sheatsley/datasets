@@ -1,12 +1,13 @@
 """
 This module downloads the UNSW-NB15.
 """
+
 import pathlib
 
 import pandas
 
 
-def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
+def retrieve(binary=False, directory=pathlib.Path("/tmp/unswnb15"), force=False):
     """
     This function downloads, preprocesses, and saves the UNSW-NB15
     (https://research.unsw.edu.au/projects/unsw-nb15-dataset). Specifically,
@@ -26,6 +27,8 @@ def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
     set (and not present in the test set). Notably, the UNSW-NB15 training and
     test sets are mistakenly labeled in reverse.
 
+    :param binary: whether to use the binary or multiclass labels
+    :type binary: bool
     :param directory: directory to download the datasets to
     :type directory: str
     :param force: redownload the data, even if it exists
@@ -53,6 +56,7 @@ def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
     # retrieve the dataset, drop columns, nulls, and invalid features
     dataset = {}
     dataframes = []
+    label = ("attack_cat", "label")
     directory.mkdir(parents=True, exist_ok=True)
     for (partition, file), url in zip(files, urls):
         try:
@@ -63,13 +67,13 @@ def retrieve(directory=pathlib.Path("/tmp/unswnb15"), force=False):
             df = pandas.read_csv(url)
             df.to_csv(directory / file, index=False)
         dataframes.append(df)
-    print("Processing the CIC-MalMem-2022...")
+    print("Processing the UNSW-NB15...")
     for (partition, file), df in zip(files, dataframes):
-        df.drop(columns=["id", "label"], inplace=True)
+        df.drop(columns=["id", label[~binary]], inplace=True)
         df.dropna(inplace=True)
         df = df[~df.isin(invalid_features).any(axis=1)]
         df.reset_index(drop=True, inplace=True)
-        data = df.drop(columns="attack_cat")
-        labels = df["attack_cat"].copy()
+        data = df.drop(columns=label[binary])
+        labels = df[label[binary]].copy()
         dataset[partition] = {"data": data, "labels": labels}
     return dataset
