@@ -2,13 +2,13 @@
 This module defines aliases and classes for transforming and cleaning datasets.
 """
 
-import pandas
 import sklearn.preprocessing
 
 # the following sklearn transformations are supported
 LabelEncoder = sklearn.preprocessing.LabelEncoder
 MinMaxScaler = sklearn.preprocessing.MinMaxScaler
 OneHotEncoder = sklearn.preprocessing.OneHotEncoder
+OrdinalEncoder = sklearn.preprocessing.OrdinalEncoder
 RobustScaler = sklearn.preprocessing.RobustScaler
 StandardScaler = sklearn.preprocessing.StandardScaler
 
@@ -75,7 +75,7 @@ class Destupefier(sklearn.base.TransformerMixin):
         return dataset, labels
 
 
-class IdentityTransformer(sklearn.base.TransformerMixin):
+class IdentityTransformer(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
     """
     The IdentityTransformer is a stateless transformer which returns the input
     unchanged (used when a transformer is required, but no transformation is desired).
@@ -91,6 +91,17 @@ class IdentityTransformer(sklearn.base.TransformerMixin):
         :param *_: arbitrary arguments (not used)
         :type *_: list
         :return: 'fitted' IdentityTransformer
+        :rtype: IdentityTransformer object
+        """
+        return self
+
+    def set_output(self, **_):
+        """
+        This method is implemented as to comply with the set_output API.
+
+        :param **_: arbitrary arguments (not used)
+        :type **_: dict
+        :return: IdentityTransformer
         :rtype: IdentityTransformer object
         """
         return self
