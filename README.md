@@ -66,9 +66,9 @@ with the dataset referenced as
 specified, the file name defaults to the name of the dataset concatenated with
 the transformations) via:
 
-    mlds nslkdd -f protocol_type,service,flag OneHotEncoder -f all MinMaxScaler -l LabelEncoder 
+    mlds nslkdd -f protocol_type,service,flag OneHotEncoder -f all MinMaxScaler -l LabelEncoder
 
-Afterwards, import the dataset filename to load it: 
+Afterwards, import the dataset filename to load it:
 
     >>> import mlds
     >>> from mlds import mnist
@@ -136,17 +136,19 @@ complex use cases.
     does not contain this key, then all partitions are fitted and transformed
     separately.
 
-* Transformations: Currently, the following data transformations are supported: 
+* Transformations: Currently, the following data transformations are supported:
     * 0-1 scaling (per feature): [MinMaxScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html)
     * One-hot encoding: [MinMaxScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html)
+    * Categorical to integer encoding: [OrdinalEncoder](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OrdinalEncoder.html)
     * Outlier-aware scaling: [RobustScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html)
     * Remove mean and scale to unit variance: [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html)
     * 0-1 scaling (across all features): [UniformScaler](https://github.com/sheatsley/datasets/blob/e11f59fa498fb0606a7231f6588607932b8c7d9b/mlds/transformations.py#L110)
 
     Adding custom transformations requires inheriting
-    `sklearn.base.TransformerMixin` and implementing `fit` and `transform`
-    methods. Alternatively, transformations from other libraries can be simply
-    aliased into the `transformations` module.
+    `sklearn.base.BaseEstimator` and `sklearn.base.TransformerMixin` and
+    implementing `fit`, `set_output`, and `transform` methods. Alternatively,
+    transformations from other libraries can be simply aliased into the
+    `transformations` module.
 
 ## Repo Overview
 
