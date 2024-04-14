@@ -1,5 +1,5 @@
 # Dockerfile for Machine Learning Datasets: https://github.com/sheatsley/datasets
-ARG BASE=nvidia/cuda:12.2.0-runtime-ubuntu22.04
+ARG BASE=nvidia/cuda:12.4.1-runtime-ubuntu22.04
 FROM ${BASE}
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y git python3-pip \
